@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,7 +16,7 @@
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; background: #0a0a0b; color: var(--ink); overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", "PingFang SC", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
       -webkit-font-smoothing: antialiased; }
     #map { position: fixed; inset: 0; }
 
@@ -114,13 +114,13 @@
   <section class="brand glass">
     <p class="eyebrow">Urban AI · Demo</p>
     <h1>How much of downtown is <b>parking</b>?</h1>
-    <p>点击城市，查看市中心被地面停车场占用的地块。当前为 OpenStreetMap 已标注数据，模型结果待接入。</p>
+    <p>Pick a city, or zoom into any downtown, to see the parcels taken up by surface parking. Lots shown are mapped in OpenStreetMap today; model predictions come next.</p>
   </section>
 
   <nav class="actions">
-    <button class="btn" id="btn-overview">总览</button>
-    <button class="btn on" id="btn-lots">停车场</button>
-    <button class="btn" id="btn-about">关于</button>
+    <button class="btn" id="btn-overview">Overview</button>
+    <button class="btn on" id="btn-lots">Lots</button>
+    <button class="btn" id="btn-about">About</button>
   </nav>
 
   <aside class="panel glass" id="panel"></aside>
@@ -129,25 +129,20 @@
 
   <div class="about" id="about">
     <div class="card glass">
-      <h3>关于这个 demo</h3>
-      <p>橙色地块来自 OpenStreetMap 中标注为 amenity=parking 的地面停车场，在浏览器里实时读取。OSM 会漏标，所以这些面积是下限，不是最终结果。</p>
-      <p>城市范围是大致的示意框，不是官方市中心边界。之后会换成在 NAIP 航拍影像上训练的 U-Net 模型的识别结果。</p>
-      <p>停车场是否空着（实时占用）无法从航拍或 OSM 得知，这里不显示。</p>
+      <h3>About this demo</h3>
+      <p>Orange shapes are surface lots tagged <code>amenity=parking</code> in OpenStreetMap, downloaded 2026-11-12. OSM misses some lots, so these areas are a lower bound, not a final result.</p>
+      <p>Each city uses a rough downtown box, not an official boundary. These lots will be replaced by predictions from a U-Net trained on NAIP aerial imagery.</p>
+      <p>Real-time occupancy (whether a lot is empty) cannot be read from aerial imagery or OSM, so it is not shown.</p>
       <p style="color: var(--ink-3); font-size: 12px;">Build 2026-11-12</p>
-      <button class="btn" id="btn-close">关闭</button>
+      <button class="btn" id="btn-close">Close</button>
     </div>
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script>
     (function () {
-      var OVERVIEW = { center: [-86.5, 36.0], zoom: 3.9 };
-      var OVERPASS = [
-        'https://overpass-api.de/api/interpreter',
-        'https://overpass.kumi.systems/api/interpreter',
-        'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
-      ];
-      var EXCLUDE = { 'underground': 1, 'multi-storey': 1, 'rooftop': 1, 'garage': 1 };
+      var CONUS = [[-125.5, 23.5], [-66.0, 49.8]];
+      var LIMIT = [[-135, 18], [-55, 54]];
       var SQFT_PER_M2 = 10.7639, M2_PER_ACRE = 4046.86;
 
       var style = {
@@ -157,8 +152,16 @@
         },
         layers: [
           { id: 'bg', type: 'background', paint: { 'background-color': '#0a0a0b' } },
-          { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#141416' } },
-          { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': '#101211' } },
+          { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#0a0a0b' } },
+          { id: 'coast', type: 'line', source: 'omt', 'source-layer': 'water', maxzoom: 9,
+            paint: { 'line-color': '#ffffff', 'line-opacity': 0.42, 'line-width': 0.7 } },
+          { id: 'states', type: 'line', source: 'omt', 'source-layer': 'boundary',
+            filter: ['all', ['==', ['get', 'admin_level'], 4], ['!=', ['get', 'maritime'], 1]],
+            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.08, 8, 0.16], 'line-width': 0.5 } },
+          { id: 'country', type: 'line', source: 'omt', 'source-layer': 'boundary',
+            filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]],
+            paint: { 'line-color': '#ffffff', 'line-opacity': 0.55, 'line-width': 0.9 } },
+          { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', minzoom: 10, paint: { 'fill-color': '#0f1110' } },
           { id: 'building', type: 'fill', source: 'omt', 'source-layer': 'building', minzoom: 13,
             paint: { 'fill-color': '#161618', 'fill-outline-color': '#1f1f22' } },
           { id: 'road-minor', type: 'line', source: 'omt', 'source-layer': 'transportation',
@@ -177,7 +180,7 @@
       };
 
       var map = new maplibregl.Map({
-        container: 'map', style: style, center: OVERVIEW.center, zoom: OVERVIEW.zoom,
+        container: 'map', style: style, bounds: CONUS, maxBounds: LIMIT, renderWorldCopies: false,
         attributionControl: false, dragRotate: false, pitchWithRotate: false
       });
       map.addControl(new maplibregl.AttributionControl({
@@ -188,8 +191,6 @@
       var cities = [], active = null, lotsVisible = true;
       var panel = document.getElementById('panel');
       var strip = document.getElementById('strip');
-
-      function store(key, val) { try { if (val === undefined) { return localStorage.getItem(key); } localStorage.setItem(key, val); } catch (e) { return null; } }
 
       function ringArea(coords) {
         // planar area in m² using a local equirectangular projection
@@ -206,100 +207,98 @@
         return ringArea([[b[1], b[0]], [b[3], b[0]], [b[3], b[2]], [b[1], b[2]], [b[1], b[0]]]);
       }
 
+      function pad(withPanel) {
+        var narrow = window.innerWidth <= 760;
+        if (narrow) { return withPanel ? { top: 90, bottom: 330, left: 16, right: 16 } : { top: 110, bottom: 140, left: 16, right: 16 }; }
+        return withPanel ? { top: 150, bottom: 150, left: 40, right: 350 } : { top: 140, bottom: 140, left: 60, right: 60 };
+      }
+
       function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d }); }
 
-      function toGeoJSON(osm) {
+      // Lots are stored as compact text, one lot per line:
+      // osm_id|name|parking|fee|access|x0 y0 dx dy dx dy ...  (integers, 1e-5 degrees, delta-encoded)
+      function decode(txt) {
         var feats = [];
-        (osm.elements || []).forEach(function (el) {
-          if (el.type !== 'way' || !el.geometry || el.geometry.length < 4) { return; }
-          var t = el.tags || {};
-          if (EXCLUDE[t.parking]) { return; }
-          var ring = el.geometry.map(function (p) { return [p.lon, p.lat]; });
-          var f = ring[0], l = ring[ring.length - 1];
-          if (f[0] !== l[0] || f[1] !== l[1]) { return; }
-          var m2 = ringArea(ring);
-          feats.push({ type: 'Feature', id: el.id,
-            properties: { osm_id: el.id, name: t.name || '', parking: t.parking || '未标注类型', access: t.access || '', fee: t.fee || '', m2: m2 },
+        txt.split('\n').forEach(function (line) {
+          if (!line) { return; }
+          var c = line.split('|'), v = c[5].split(' ').map(Number), ring = [], x = 0, y = 0;
+          for (var i = 0; i < v.length; i += 2) { x += v[i]; y += v[i + 1]; ring.push([x / 1e5, y / 1e5]); }
+          ring.push(ring[0].slice());
+          feats.push({ type: 'Feature', id: Number(c[0]),
+            properties: { osm_id: c[0], name: c[1], parking: c[2] || 'unspecified', fee: c[3], access: c[4], m2: ringArea(ring) },
             geometry: { type: 'Polygon', coordinates: [ring] } });
         });
         return { type: 'FeatureCollection', features: feats };
       }
 
-      function fetchLots(city) {
-        var cacheKey = 'lots-v1-' + city.id;
-        var cached = store(cacheKey);
-        if (cached) { try { return Promise.resolve(JSON.parse(cached)); } catch (e) {} }
-        var b = city.bbox;
-        var q = '[out:json][timeout:25];way["amenity"="parking"](' + b.join(',') + ');out geom;';
-        var tryAt = function (i) {
-          if (i >= OVERPASS.length) { return Promise.reject(new Error('all endpoints failed')); }
-          return fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q),
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
-            .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
-            .catch(function () { return tryAt(i + 1); });
-        };
-        return tryAt(0).then(function (osm) {
-          var gj = toGeoJSON(osm);
-          store(cacheKey, JSON.stringify(gj));
-          return gj;
+      var lotsByCity = {};
+      function loadAllLots(list) {
+        return Promise.all(list.map(function (c) {
+          return fetch('data/lots/' + c.id + '.txt')
+            .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
+            .then(function (t) { lotsByCity[c.id] = decode(t); })
+            .catch(function () { lotsByCity[c.id] = null; });
+        })).then(function () {
+          var all = [];
+          list.forEach(function (c) { if (lotsByCity[c.id]) { all = all.concat(lotsByCity[c.id].features); } });
+          map.getSource('lots').setData({ type: 'FeatureCollection', features: all });
         });
       }
 
       function renderPanel(city, gj) {
         if (!gj) {
-          panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown</p><p class="loading">正在读取 OpenStreetMap 停车场数据…</p>';
+          panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown</p><p class="loading">Loading parking lots…</p>';
           return;
         }
         var total = gj.features.reduce(function (s, f) { return s + f.properties.m2; }, 0);
         var share = total / bboxArea(city.bbox) * 100;
         panel.innerHTML =
-          '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown 示意范围</p>' +
-          '<div class="stat"><div class="k">停车场数量</div><div class="v">' + gj.features.length + '<small>处</small></div></div>' +
-          '<div class="stat"><div class="k">停车场总面积</div><div class="v">' + fmt(total / M2_PER_ACRE, 1) + '<small>acres</small></div></div>' +
-          '<div class="stat"><div class="k">占示意范围比例</div><div class="v">' + fmt(share, 1) + '<small>%</small></div></div>' +
-          '<p class="note">数据为 OSM 已标注的地面停车场，可能漏标，面积为下限，不是模型结果。</p>';
+          '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown (approx.)</p>' +
+          '<div class="stat"><div class="k">Surface lots</div><div class="v">' + gj.features.length + '<small>mapped</small></div></div>' +
+          '<div class="stat"><div class="k">Total area</div><div class="v">' + fmt(total / M2_PER_ACRE, 1) + '<small>acres</small></div></div>' +
+          '<div class="stat"><div class="k">Share of downtown box</div><div class="v">' + fmt(share, 1) + '<small>%</small></div></div>' +
+          '<p class="note">Lots mapped in OpenStreetMap. OSM is incomplete, so this is a lower bound and not model output.</p>';
       }
 
       function showError(city) {
-        panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + '</p><p class="loading">暂时读取不到 OSM 数据，请稍后再点一次。</p>';
+        panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + '</p><p class="loading">Could not load parking data. Try again in a moment.</p>';
       }
 
       function selectCity(city) {
         active = city;
         Array.prototype.forEach.call(strip.children, function (b) { b.classList.toggle('active', b.dataset.id === city.id); });
         panel.classList.add('show');
-        renderPanel(city, null);
         var b = city.bbox;
-        map.fitBounds([[b[1], b[0]], [b[3], b[2]]], { padding: { top: 120, bottom: 140, left: 60, right: 360 }, duration: 1600, essential: true });
-        fetchLots(city).then(function (gj) {
-          if (active !== city) { return; }
-          map.getSource('lots').setData(gj);
-          renderPanel(city, gj);
-        }).catch(function () { if (active === city) { showError(city); } });
+        map.fitBounds([[b[1], b[0]], [b[3], b[2]]], { padding: pad(true), duration: 1600, essential: true });
+        if (lotsByCity[city.id]) { renderPanel(city, lotsByCity[city.id]); }
+        else if (lotsByCity[city.id] === null) { showError(city); }
+        else { renderPanel(city, null); }
       }
 
       function overview() {
         active = null;
         panel.classList.remove('show');
         Array.prototype.forEach.call(strip.children, function (b) { b.classList.remove('active'); });
-        map.flyTo({ center: OVERVIEW.center, zoom: OVERVIEW.zoom, duration: 1400, essential: true });
+        map.flyTo({ bounds: CONUS, maxBounds: LIMIT, renderWorldCopies: false, duration: 1400, essential: true });
       }
 
       map.on('load', function () {
+        map.fitBounds(CONUS, { padding: pad(false), duration: 0 });
         map.addSource('lots', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots',
+        map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots', minzoom: 10.5,
           paint: { 'fill-color': '#ff8a3d', 'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.85, 0.55] } });
-        map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', paint: { 'line-color': '#ffb27d', 'line-width': 0.8 } });
+        map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', minzoom: 10.5, paint: { 'line-color': '#ffb27d', 'line-width': 0.8 } });
 
         fetch('data/cities.json').then(function (r) { return r.json(); }).then(function (list) {
           cities = list;
           map.addSource('cities', { type: 'geojson', data: { type: 'FeatureCollection', features: list.map(function (c) {
             return { type: 'Feature', properties: { id: c.id }, geometry: { type: 'Point', coordinates: c.center } }; }) } });
-          map.addLayer({ id: 'city-glow', type: 'circle', source: 'cities', maxzoom: 12,
+          map.addLayer({ id: 'city-glow', type: 'circle', source: 'cities', maxzoom: 11,
             paint: { 'circle-radius': 16, 'circle-color': '#ff8a3d', 'circle-opacity': 0.18, 'circle-blur': 0.6 } });
-          map.addLayer({ id: 'city-dot', type: 'circle', source: 'cities', maxzoom: 12,
+          map.addLayer({ id: 'city-dot', type: 'circle', source: 'cities', maxzoom: 11,
             paint: { 'circle-radius': 5.5, 'circle-color': '#ff8a3d', 'circle-stroke-color': '#0a0a0b', 'circle-stroke-width': 1.5 } });
 
+          loadAllLots(list).then(function () { if (active) { selectCity(active); } });
           list.forEach(function (c) {
             var b = document.createElement('button');
             b.className = 'city'; b.dataset.id = c.id;
@@ -332,9 +331,9 @@
 
         map.on('click', 'lots-fill', function (e) {
           var p = e.features[0].properties, m2 = Number(p.m2);
-          var html = '<b>' + (p.name || '地面停车场') + '</b><br>' +
-            '面积约 ' + fmt(m2 * SQFT_PER_M2, 0) + ' sq ft（' + fmt(m2 / M2_PER_ACRE, 2) + ' acres）<br>' +
-            '类型：' + p.parking + (p.fee ? ' · 收费：' + p.fee : '') + (p.access ? ' · 开放：' + p.access : '') + '<br>' +
+          var html = '<b>' + (p.name || 'Surface lot') + '</b><br>' +
+            'About ' + fmt(m2 * SQFT_PER_M2, 0) + ' sq ft (' + fmt(m2 / M2_PER_ACRE, 2) + ' acres)<br>' +
+            'Type: ' + p.parking + (p.fee ? ' · Fee: ' + p.fee : '') + (p.access ? ' · Access: ' + p.access : '') + '<br>' +
             '<span style="color:rgba(245,245,247,0.45)">OSM way ' + p.osm_id + '</span>';
           new maplibregl.Popup({ closeButton: true, maxWidth: '260px' }).setLngLat(e.lngLat).setHTML(html).addTo(map);
         });

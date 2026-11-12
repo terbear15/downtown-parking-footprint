@@ -15,7 +15,8 @@ public class SiteBuilder {
         Path template = Paths.get("java", "template", "index.html");
         Path out = Paths.get("docs", "index.html");
         String html = Files.readString(template, StandardCharsets.UTF_8)
-            .replace("{{BUILD_DATE}}", LocalDate.now().toString());
+            .replace("{{BUILD_DATE}}", LocalDate.now().toString())
+            .replace("{{DATA_DATE}}", "2026-11-12");
         Files.createDirectories(out.getParent());
         Files.writeString(out, html, StandardCharsets.UTF_8);
         System.out.println("wrote " + out);

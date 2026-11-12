@@ -2,8 +2,14 @@
 
 Each city has a centre point and an approximate downtown bounding box
 (south, west, north, east). The boxes are rough illustrative extents,
-not official downtown boundaries. Parking polygons are fetched live
-from OpenStreetMap in the browser; no parking numbers are stored here.
+not official downtown boundaries.
+
+Parking lots live in docs/data/lots/<city>.txt. They were downloaded from
+the OpenStreetMap API on 2026-11-12 (ways tagged amenity=parking, excluding
+parking=underground/multi-storey/rooftop/garage) and stored one lot per line:
+    osm_id|name|parking|fee|access|x0 y0 dx dy dx dy ...
+with coordinates as integers in 1e-5 degrees, delta-encoded.
+Data (c) OpenStreetMap contributors, ODbL.
 """
 import json
 from pathlib import Path
