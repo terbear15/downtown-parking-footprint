@@ -6,27 +6,112 @@
   <title>Surface Parking Demo</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
-    header { padding: 12px 16px; }
-    h1 { font-size: 20px; margin: 0 0 4px; }
-    .warn { background: #fff4e5; border-left: 4px solid #f0a020; padding: 6px 10px; font-size: 14px; margin: 0; }
-    .controls { padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
-    button { padding: 6px 12px; border: 1px solid #888; background: #fff; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #f2f2f2; }
-    #map { height: 70vh; margin: 0 16px 16px; border: 1px solid #ddd; }
+    :root {
+      --bg: #f5f5f7;
+      --ink: #1d1d1f;
+      --ink-2: #6e6e73;
+      --accent: #0071e3;
+      --glass: rgba(255, 255, 255, 0.72);
+      --line: rgba(0, 0, 0, 0.06);
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: var(--glass);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--line);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; flex-wrap: wrap; }
+    h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+    .pill {
+      font-size: 12px;
+      color: #9a5a00;
+      background: rgba(255, 159, 10, 0.14);
+      padding: 5px 12px;
+      border-radius: 999px;
+    }
+    .segmented {
+      display: inline-flex;
+      background: rgba(118, 118, 128, 0.12);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+    }
+    button {
+      font: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover { background: rgba(255, 255, 255, 0.9); }
+    button:active { transform: scale(0.98); }
+    main { padding: 32px 0 48px; }
+    .intro { color: var(--ink-2); font-size: 15px; margin: 0 0 20px; }
+    #map {
+      height: 68vh;
+      min-height: 420px;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+    }
+    .leaflet-container { font-family: inherit; }
+    .leaflet-control-zoom {
+      border: 0 !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+      border-radius: 12px !important;
+      overflow: hidden;
+    }
+    .leaflet-control-zoom a {
+      color: var(--ink) !important;
+      border-bottom: 1px solid var(--line) !important;
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+    .leaflet-popup-content { margin: 14px 16px; font-size: 13px; line-height: 1.5; color: var(--ink); }
+    .leaflet-popup-content strong { font-weight: 600; }
+    .leaflet-popup-content em { color: var(--ink-2); font-style: normal; }
+    @media (max-width: 640px) {
+      .wrap { padding: 0 16px; }
+      #map { height: 60vh; min-height: 360px; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Surface Parking Demo</h1>
-    <p class="warn">占位数据，不是分析结果。模型跑通后会替换。</p>
+    <div class="wrap bar">
+      <h1>Surface Parking Demo</h1>
+      <span class="pill" id="notice">占位数据，不是分析结果</span>
+    </div>
   </header>
-  <div class="controls">
-    <button id="toggle-markers">显示 / 隐藏标记</button>
-    <button id="toggle-basemap">切换底图</button>
-    <button id="reset-view">回到默认视角</button>
-  </div>
-  <div id="map"></div>
+  <main class="wrap">
+    <p class="intro">示意地图。标记为占位，模型跑通后替换为真实的停车用地占比。</p>
+    <div class="segmented" style="margin-bottom: 16px;">
+      <button id="toggle-markers">显示 / 隐藏标记</button>
+      <button id="toggle-basemap">切换底图</button>
+      <button id="reset-view">回到默认视角</button>
+    </div>
+    <div id="map"></div>
+  </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     var DEFAULT_VIEW = [39.95, -77.5];
@@ -41,7 +126,7 @@
       attribution: 'Tiles &copy; Esri'
     });
 
-    var map = L.map('map').setView(DEFAULT_VIEW, DEFAULT_ZOOM);
+    var map = L.map('map', { zoomControl: true }).setView(DEFAULT_VIEW, DEFAULT_ZOOM);
     var currentBase = streets.addTo(map);
 
     var markers = L.layerGroup().addTo(map);
@@ -52,7 +137,7 @@
       .then(function (geo) {
         L.geoJSON(geo, {
           pointToLayer: function (feature, latlng) {
-            return L.circleMarker(latlng, { radius: 9, weight: 2, color: '#b5532a', fillColor: '#e08a5c', fillOpacity: 0.8 });
+            return L.circleMarker(latlng, { radius: 9, weight: 2, color: '#ffffff', fillColor: '#0071e3', fillOpacity: 0.9 });
           },
           onEachFeature: function (feature, layer) {
             var p = feature.properties;
@@ -61,7 +146,7 @@
         }).addTo(markers);
       })
       .catch(function () {
-        document.querySelector('.warn').textContent = '无法加载数据文件 data/sample.geojson';
+        document.getElementById('notice').textContent = '无法加载数据文件';
       });
 
     document.getElementById('toggle-markers').addEventListener('click', function () {
