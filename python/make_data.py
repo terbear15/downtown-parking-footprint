@@ -1,22 +1,30 @@
-"""Write a small placeholder CSV of city parking shares.
+"""Write placeholder GeoJSON points for the demo map.
 
-PLACEHOLDER VALUES ONLY. These numbers are illustrative and are NOT
-analysis results. Replace them with model outputs once the pipeline runs.
+PLACEHOLDER VALUES ONLY. parking_share_pct is 0.0 for every city and is
+NOT an analysis result. Replace with model output once the pipeline runs.
 """
-import csv
+import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "data" / "sample.csv"
+OUT = Path(__file__).resolve().parent.parent / "docs" / "data" / "sample.geojson"
 
-rows = [
-    {"city": "City A (placeholder)", "parking_share_pct": 0.0, "note": "replace with model output"},
-    {"city": "City B (placeholder)", "parking_share_pct": 0.0, "note": "replace with model output"},
+cities = [
+    {"name": "Philadelphia (placeholder)", "lon": -75.1652, "lat": 39.9526},
+    {"name": "Pittsburgh (placeholder)", "lon": -80.0000, "lat": 40.4406},
 ]
 
-OUT.parent.mkdir(parents=True, exist_ok=True)
-with OUT.open("w", newline="", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=["city", "parking_share_pct", "note"])
-    writer.writeheader()
-    writer.writerows(rows)
+geojson = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {"name": c["name"], "parking_share_pct": 0.0, "placeholder": True},
+            "geometry": {"type": "Point", "coordinates": [c["lon"], c["lat"]]},
+        }
+        for c in cities
+    ],
+}
 
+OUT.parent.mkdir(parents=True, exist_ok=True)
+OUT.write_text(json.dumps(geojson, ensure_ascii=False, indent=2), encoding="utf-8")
 print(f"wrote {OUT}")

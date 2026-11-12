@@ -1,10 +1,10 @@
 # Surface Parking Demo
 
-Static demo site for the surface-parking project.
+Static demo: a Leaflet map with buttons, served by GitHub Pages from `docs/`.
 
-- `python/make_data.py` writes `data/sample.csv` (placeholder values).
-- `java/src/SiteBuilder.java` reads the CSV and writes `docs/index.html`.
-- GitHub Pages serves `docs/`. Java runs at build time only; the browser runs plain HTML.
+- `python/make_data.py` writes `docs/data/sample.geojson` (placeholder values).
+- `java/src/SiteBuilder.java` writes `docs/index.html` (build step only).
+- The browser runs plain JavaScript for the map and buttons. Java does not run in the browser.
 
 ## Rebuild
 
@@ -12,4 +12,4 @@ Static demo site for the surface-parking project.
     javac -d java/out java/src/SiteBuilder.java
     java -cp java/out SiteBuilder
 
-Values in this demo are placeholders, not results.
+Values are placeholders, not results.

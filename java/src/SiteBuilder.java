@@ -1,55 +1,105 @@
-import java.io.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
- * Reads data/sample.csv and writes docs/index.html.
- * GitHub Pages serves the docs/ folder as a static site, so the
- * browser only runs plain HTML. Java runs here, at build time.
+ * Writes docs/index.html. GitHub Pages serves docs/ as static files.
+ * Java runs at build time only. The browser runs the JavaScript below,
+ * which loads docs/data/sample.geojson and draws it on a Leaflet map.
  */
 public class SiteBuilder {
     public static void main(String[] args) throws IOException {
-        Path csv = Paths.get("data", "sample.csv");
         Path out = Paths.get("docs", "index.html");
-
-        List<String> lines = Files.readAllLines(csv, StandardCharsets.UTF_8);
-        StringBuilder rows = new StringBuilder();
-        for (String line : lines.subList(1, lines.size())) {
-            String[] c = line.split(",", -1);
-            rows.append("      <tr><td>").append(esc(c[0])).append("</td><td>")
-                .append(esc(c[1])).append("</td><td>").append(esc(c[2])).append("</td></tr>\n");
-        }
-
-        String html = """
-            <!DOCTYPE html>
-            <html lang="zh">
-            <head>
-              <meta charset="utf-8">
-              <title>Surface Parking Demo</title>
-              <style>
-                body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #222; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
-                .warn { background: #fff4e5; border-left: 4px solid #f0a020; padding: 8px 12px; }
-              </style>
-            </head>
-            <body>
-              <h1>Surface Parking Demo</h1>
-              <p class="warn">占位数据，不是分析结果。模型跑通后会替换。</p>
-              <table>
-                <tr><th>城市</th><th>停车用地占比（%）</th><th>备注</th></tr>
-            %ROWS%  </table>
-            </body>
-            </html>
-            """.replace("%ROWS%", rows.toString());
-
         Files.createDirectories(out.getParent());
-        Files.writeString(out, html, StandardCharsets.UTF_8);
+        Files.writeString(out, PAGE, StandardCharsets.UTF_8);
         System.out.println("wrote " + out);
     }
 
-    private static String esc(String s) {
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-    }
+    private static final String PAGE = """
+        <!DOCTYPE html>
+        <html lang="zh">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Surface Parking Demo</title>
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+          <style>
+            body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
+            header { padding: 12px 16px; }
+            h1 { font-size: 20px; margin: 0 0 4px; }
+            .warn { background: #fff4e5; border-left: 4px solid #f0a020; padding: 6px 10px; font-size: 14px; margin: 0; }
+            .controls { padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+            button { padding: 6px 12px; border: 1px solid #888; background: #fff; border-radius: 6px; cursor: pointer; }
+            button:hover { background: #f2f2f2; }
+            #map { height: 70vh; margin: 0 16px 16px; border: 1px solid #ddd; }
+          </style>
+        </head>
+        <body>
+          <header>
+            <h1>Surface Parking Demo</h1>
+            <p class="warn">占位数据，不是分析结果。模型跑通后会替换。</p>
+          </header>
+          <div class="controls">
+            <button id="toggle-markers">显示 / 隐藏标记</button>
+            <button id="toggle-basemap">切换底图</button>
+            <button id="reset-view">回到默认视角</button>
+          </div>
+          <div id="map"></div>
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          <script>
+            var DEFAULT_VIEW = [39.95, -77.5];
+            var DEFAULT_ZOOM = 6;
+
+            var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            });
+            var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+              maxZoom: 19,
+              attribution: 'Tiles &copy; Esri'
+            });
+
+            var map = L.map('map').setView(DEFAULT_VIEW, DEFAULT_ZOOM);
+            var currentBase = streets.addTo(map);
+
+            var markers = L.layerGroup().addTo(map);
+            var markersVisible = true;
+
+            fetch('data/sample.geojson')
+              .then(function (r) { return r.json(); })
+              .then(function (geo) {
+                L.geoJSON(geo, {
+                  pointToLayer: function (feature, latlng) {
+                    return L.circleMarker(latlng, { radius: 9, weight: 2, color: '#b5532a', fillColor: '#e08a5c', fillOpacity: 0.8 });
+                  },
+                  onEachFeature: function (feature, layer) {
+                    var p = feature.properties;
+                    layer.bindPopup('<strong>' + p.name + '</strong><br>停车用地占比：' + p.parking_share_pct + '%<br><em>占位数据</em>');
+                  }
+                }).addTo(markers);
+              })
+              .catch(function () {
+                document.querySelector('.warn').textContent = '无法加载数据文件 data/sample.geojson';
+              });
+
+            document.getElementById('toggle-markers').addEventListener('click', function () {
+              if (markersVisible) { map.removeLayer(markers); } else { map.addLayer(markers); }
+              markersVisible = !markersVisible;
+            });
+
+            document.getElementById('toggle-basemap').addEventListener('click', function () {
+              map.removeLayer(currentBase);
+              currentBase = (currentBase === streets) ? satellite : streets;
+              map.addLayer(currentBase);
+            });
+
+            document.getElementById('reset-view').addEventListener('click', function () {
+              map.setView(DEFAULT_VIEW, DEFAULT_ZOOM);
+            });
+          </script>
+        </body>
+        </html>
+        """;
 }

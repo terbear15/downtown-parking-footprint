@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Philadelphia (placeholder)",
+        "parking_share_pct": 0.0,
+        "placeholder": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.1652,
+          39.9526
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pittsburgh (placeholder)",
+        "parking_share_pct": 0.0,
+        "placeholder": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -80.0,
+          40.4406
+        ]
+      }
+    }
+  ]
+}
