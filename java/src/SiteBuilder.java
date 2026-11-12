@@ -3,188 +3,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 
 /**
- * Writes docs/index.html. GitHub Pages serves docs/ as static files.
- * Java runs at build time only. The browser runs the JavaScript below,
- * which loads docs/data/sample.geojson and draws it on a Leaflet map.
+ * Build step: reads java/template/index.html, stamps the build date,
+ * and writes docs/index.html for GitHub Pages. Java runs only here;
+ * the browser runs the page's JavaScript (MapLibre map, buttons).
  */
 public class SiteBuilder {
     public static void main(String[] args) throws IOException {
+        Path template = Paths.get("java", "template", "index.html");
         Path out = Paths.get("docs", "index.html");
+        String html = Files.readString(template, StandardCharsets.UTF_8)
+            .replace("{{BUILD_DATE}}", LocalDate.now().toString());
         Files.createDirectories(out.getParent());
-        Files.writeString(out, PAGE, StandardCharsets.UTF_8);
+        Files.writeString(out, html, StandardCharsets.UTF_8);
         System.out.println("wrote " + out);
     }
-
-    private static final String PAGE = """
-        <!DOCTYPE html>
-        <html lang="zh">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Surface Parking Demo</title>
-          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-          <style>
-            :root {
-              --bg: #f5f5f7;
-              --ink: #1d1d1f;
-              --ink-2: #6e6e73;
-              --accent: #0071e3;
-              --glass: rgba(255, 255, 255, 0.72);
-              --line: rgba(0, 0, 0, 0.06);
-              --shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-            }
-            * { box-sizing: border-box; }
-            body {
-              margin: 0;
-              background: var(--bg);
-              color: var(--ink);
-              font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
-              -webkit-font-smoothing: antialiased;
-            }
-            header {
-              position: sticky;
-              top: 0;
-              z-index: 1000;
-              background: var(--glass);
-              -webkit-backdrop-filter: saturate(180%) blur(20px);
-              backdrop-filter: saturate(180%) blur(20px);
-              border-bottom: 1px solid var(--line);
-            }
-            .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-            .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; flex-wrap: wrap; }
-            h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
-            .pill {
-              font-size: 12px;
-              color: #9a5a00;
-              background: rgba(255, 159, 10, 0.14);
-              padding: 5px 12px;
-              border-radius: 999px;
-            }
-            .segmented {
-              display: inline-flex;
-              background: rgba(118, 118, 128, 0.12);
-              border-radius: 10px;
-              padding: 3px;
-              gap: 2px;
-            }
-            button {
-              font: inherit;
-              font-size: 13px;
-              color: var(--ink);
-              background: transparent;
-              border: 0;
-              padding: 6px 14px;
-              border-radius: 8px;
-              cursor: pointer;
-              transition: background 0.2s ease;
-            }
-            button:hover { background: rgba(255, 255, 255, 0.9); }
-            button:active { transform: scale(0.98); }
-            main { padding: 32px 0 48px; }
-            .intro { color: var(--ink-2); font-size: 15px; margin: 0 0 20px; }
-            #map {
-              height: 68vh;
-              min-height: 420px;
-              border-radius: 18px;
-              overflow: hidden;
-              box-shadow: var(--shadow);
-              border: 1px solid var(--line);
-            }
-            .leaflet-container { font-family: inherit; }
-            .leaflet-control-zoom {
-              border: 0 !important;
-              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
-              border-radius: 12px !important;
-              overflow: hidden;
-            }
-            .leaflet-control-zoom a {
-              color: var(--ink) !important;
-              border-bottom: 1px solid var(--line) !important;
-            }
-            .leaflet-popup-content-wrapper {
-              border-radius: 14px;
-              box-shadow: var(--shadow);
-            }
-            .leaflet-popup-content { margin: 14px 16px; font-size: 13px; line-height: 1.5; color: var(--ink); }
-            .leaflet-popup-content strong { font-weight: 600; }
-            .leaflet-popup-content em { color: var(--ink-2); font-style: normal; }
-            @media (max-width: 640px) {
-              .wrap { padding: 0 16px; }
-              #map { height: 60vh; min-height: 360px; }
-            }
-          </style>
-        </head>
-        <body>
-          <header>
-            <div class="wrap bar">
-              <h1>Surface Parking Demo</h1>
-              <span class="pill" id="notice">占位数据，不是分析结果</span>
-            </div>
-          </header>
-          <main class="wrap">
-            <p class="intro">示意地图。标记为占位，模型跑通后替换为真实的停车用地占比。</p>
-            <div class="segmented" style="margin-bottom: 16px;">
-              <button id="toggle-markers">显示 / 隐藏标记</button>
-              <button id="toggle-basemap">切换底图</button>
-              <button id="reset-view">回到默认视角</button>
-            </div>
-            <div id="map"></div>
-          </main>
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-          <script>
-            var DEFAULT_VIEW = [39.95, -77.5];
-            var DEFAULT_ZOOM = 6;
-
-            var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              maxZoom: 19,
-              attribution: '&copy; OpenStreetMap contributors'
-            });
-            var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-              maxZoom: 19,
-              attribution: 'Tiles &copy; Esri'
-            });
-
-            var map = L.map('map', { zoomControl: true }).setView(DEFAULT_VIEW, DEFAULT_ZOOM);
-            var currentBase = streets.addTo(map);
-
-            var markers = L.layerGroup().addTo(map);
-            var markersVisible = true;
-
-            fetch('data/sample.geojson')
-              .then(function (r) { return r.json(); })
-              .then(function (geo) {
-                L.geoJSON(geo, {
-                  pointToLayer: function (feature, latlng) {
-                    return L.circleMarker(latlng, { radius: 9, weight: 2, color: '#ffffff', fillColor: '#0071e3', fillOpacity: 0.9 });
-                  },
-                  onEachFeature: function (feature, layer) {
-                    var p = feature.properties;
-                    layer.bindPopup('<strong>' + p.name + '</strong><br>停车用地占比：' + p.parking_share_pct + '%<br><em>占位数据</em>');
-                  }
-                }).addTo(markers);
-              })
-              .catch(function () {
-                document.getElementById('notice').textContent = '无法加载数据文件';
-              });
-
-            document.getElementById('toggle-markers').addEventListener('click', function () {
-              if (markersVisible) { map.removeLayer(markers); } else { map.addLayer(markers); }
-              markersVisible = !markersVisible;
-            });
-
-            document.getElementById('toggle-basemap').addEventListener('click', function () {
-              map.removeLayer(currentBase);
-              currentBase = (currentBase === streets) ? satellite : streets;
-              map.addLayer(currentBase);
-            });
-
-            document.getElementById('reset-view').addEventListener('click', function () {
-              map.setView(DEFAULT_VIEW, DEFAULT_ZOOM);
-            });
-          </script>
-        </body>
-        </html>
-        """;
 }

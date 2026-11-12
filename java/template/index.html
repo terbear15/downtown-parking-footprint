@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Surface Parking</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <style>
+    :root {
+      --ink: #f5f5f7;
+      --ink-2: rgba(245, 245, 247, 0.62);
+      --ink-3: rgba(245, 245, 247, 0.38);
+      --glass: rgba(22, 22, 24, 0.55);
+      --line: rgba(255, 255, 255, 0.12);
+      --accent: #ff8a3d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #0a0a0b; color: var(--ink); overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", "PingFang SC", sans-serif;
+      -webkit-font-smoothing: antialiased; }
+    #map { position: fixed; inset: 0; }
+
+    .glass {
+      background: var(--glass);
+      -webkit-backdrop-filter: saturate(160%) blur(24px);
+      backdrop-filter: saturate(160%) blur(24px);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+    }
+
+    /* top-left title */
+    .brand { position: fixed; top: 24px; left: 24px; padding: 22px 26px; width: 340px; z-index: 5; }
+    .eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; }
+    .brand h1 { font-size: 30px; font-weight: 300; letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 10px; }
+    .brand h1 b { font-weight: 600; }
+    .brand p { font-size: 13px; line-height: 1.55; color: var(--ink-2); margin: 0; }
+
+    /* top-right actions */
+    .actions { position: fixed; top: 24px; right: 24px; display: flex; gap: 8px; z-index: 5; }
+    .btn {
+      font: inherit; font-size: 13px; color: var(--ink);
+      background: rgba(22, 22, 24, 0.45);
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px; padding: 9px 18px; cursor: pointer;
+      transition: background .25s ease, border-color .25s ease, color .25s ease;
+    }
+    .btn:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.5); }
+    .btn.on { background: var(--ink); color: #0a0a0b; border-color: var(--ink); }
+
+    /* bottom city strip */
+    .strip { position: fixed; left: 24px; right: 24px; bottom: 24px; padding: 14px; z-index: 5;
+      display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .strip::-webkit-scrollbar { display: none; }
+    .city {
+      flex: 1 0 150px; text-align: left; font: inherit; color: var(--ink);
+      background: transparent; border: 0; border-radius: 14px; padding: 12px 16px; cursor: pointer;
+      transition: background .25s ease;
+    }
+    .city:hover { background: rgba(255, 255, 255, 0.06); }
+    .city.active { background: rgba(255, 255, 255, 0.1); }
+    .city .dots { display: flex; gap: 4px; margin-bottom: 10px; }
+    .city .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+    .city .dots i:first-child { background: var(--accent); }
+    .city .name { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+    .city .state { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+    /* right detail panel */
+    .panel { position: fixed; top: 92px; right: 24px; width: 300px; padding: 22px 24px; z-index: 5;
+      opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .35s ease, transform .35s ease; }
+    .panel.show { opacity: 1; transform: none; pointer-events: auto; }
+    .panel h2 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 4px; }
+    .panel .sub { font-size: 12px; color: var(--ink-3); margin: 0 0 18px; }
+    .stat { padding: 14px 0; border-top: 1px solid var(--line); }
+    .stat .k { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+    .stat .v { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; margin-top: 4px; }
+    .stat .v small { font-size: 13px; color: var(--ink-2); margin-left: 4px; }
+    .note { font-size: 11.5px; line-height: 1.55; color: var(--ink-3); margin: 12px 0 0; }
+    .loading { font-size: 13px; color: var(--ink-2); }
+
+    /* about dialog */
+    .about { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.35); z-index: 20;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+    .about.show { opacity: 1; pointer-events: auto; }
+    .about .card { width: min(520px, calc(100% - 48px)); padding: 28px 30px; }
+    .about h3 { font-size: 20px; font-weight: 500; margin: 0 0 12px; }
+    .about p { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); margin: 0 0 10px; }
+    .about .btn { margin-top: 8px; }
+
+    /* map popup */
+    .maplibregl-popup-content { background: rgba(22,22,24,0.85); color: var(--ink); border: 1px solid var(--line);
+      border-radius: 14px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5;
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .maplibregl-popup-tip { display: none; }
+    .maplibregl-popup-close-button { color: var(--ink-2); font-size: 16px; right: 4px; top: 2px; }
+    .maplibregl-popup-content b { font-weight: 600; }
+    .maplibregl-ctrl-attrib { background: rgba(10,10,11,0.6) !important; color: var(--ink-3); }
+    .maplibregl-ctrl-attrib a { color: var(--ink-2) !important; }
+
+    @media (max-width: 760px) {
+      .brand { left: 12px; right: 12px; top: 12px; width: auto; padding: 16px 18px; }
+      .brand h1 { font-size: 22px; }
+      .brand p { display: none; }
+      .actions { top: auto; bottom: 118px; right: 12px; }
+      .panel { top: auto; bottom: 170px; left: 12px; right: 12px; width: auto; }
+      .strip { left: 12px; right: 12px; bottom: 12px; }
+      .city { flex-basis: 128px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <section class="brand glass">
+    <p class="eyebrow">Urban AI · Demo</p>
+    <h1>How much of downtown is <b>parking</b>?</h1>
+    <p>点击城市，查看市中心被地面停车场占用的地块。当前为 OpenStreetMap 已标注数据，模型结果待接入。</p>
+  </section>
+
+  <nav class="actions">
+    <button class="btn" id="btn-overview">总览</button>
+    <button class="btn on" id="btn-lots">停车场</button>
+    <button class="btn" id="btn-about">关于</button>
+  </nav>
+
+  <aside class="panel glass" id="panel"></aside>
+
+  <footer class="strip glass" id="strip"></footer>
+
+  <div class="about" id="about">
+    <div class="card glass">
+      <h3>关于这个 demo</h3>
+      <p>橙色地块来自 OpenStreetMap 中标注为 amenity=parking 的地面停车场，在浏览器里实时读取。OSM 会漏标，所以这些面积是下限，不是最终结果。</p>
+      <p>城市范围是大致的示意框，不是官方市中心边界。之后会换成在 NAIP 航拍影像上训练的 U-Net 模型的识别结果。</p>
+      <p>停车场是否空着（实时占用）无法从航拍或 OSM 得知，这里不显示。</p>
+      <p style="color: var(--ink-3); font-size: 12px;">Build {{BUILD_DATE}}</p>
+      <button class="btn" id="btn-close">关闭</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script>
+    (function () {
+      var OVERVIEW = { center: [-86.5, 36.0], zoom: 3.9 };
+      var OVERPASS = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+      ];
+      var EXCLUDE = { 'underground': 1, 'multi-storey': 1, 'rooftop': 1, 'garage': 1 };
+      var SQFT_PER_M2 = 10.7639, M2_PER_ACRE = 4046.86;
+
+      var style = {
+        version: 8,
+        sources: {
+          omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' }
+        },
+        layers: [
+          { id: 'bg', type: 'background', paint: { 'background-color': '#0a0a0b' } },
+          { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#141416' } },
+          { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': '#101211' } },
+          { id: 'building', type: 'fill', source: 'omt', 'source-layer': 'building', minzoom: 13,
+            paint: { 'fill-color': '#161618', 'fill-outline-color': '#1f1f22' } },
+          { id: 'road-minor', type: 'line', source: 'omt', 'source-layer': 'transportation',
+            filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'track', 'path']]],
+            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0.08, 15, 0.32],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.3, 16, 1.4] } },
+          { id: 'road-mid', type: 'line', source: 'omt', 'source-layer': 'transportation',
+            filter: ['in', ['get', 'class'], ['literal', ['secondary', 'tertiary']]],
+            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.12, 14, 0.55],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.3, 16, 2.2] } },
+          { id: 'road-major', type: 'line', source: 'omt', 'source-layer': 'transportation',
+            filter: ['in', ['get', 'class'], ['literal', ['motorway', 'trunk', 'primary']]],
+            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.18, 12, 0.85],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.3, 16, 3.2] } }
+        ]
+      };
+
+      var map = new maplibregl.Map({
+        container: 'map', style: style, center: OVERVIEW.center, zoom: OVERVIEW.zoom,
+        attributionControl: false, dragRotate: false, pitchWithRotate: false
+      });
+      map.addControl(new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+      }), 'bottom-right');
+
+      var cities = [], active = null, lotsVisible = true;
+      var panel = document.getElementById('panel');
+      var strip = document.getElementById('strip');
+
+      function store(key, val) { try { if (val === undefined) { return localStorage.getItem(key); } localStorage.setItem(key, val); } catch (e) { return null; } }
+
+      function ringArea(coords) {
+        // planar area in m² using a local equirectangular projection
+        var lat0 = coords[0][1] * Math.PI / 180, R = 6371008.8, a = 0;
+        for (var i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+          var xi = coords[i][0] * Math.PI / 180 * R * Math.cos(lat0), yi = coords[i][1] * Math.PI / 180 * R;
+          var xj = coords[j][0] * Math.PI / 180 * R * Math.cos(lat0), yj = coords[j][1] * Math.PI / 180 * R;
+          a += (xj + xi) * (yj - yi);
+        }
+        return Math.abs(a / 2);
+      }
+
+      function bboxArea(b) {
+        return ringArea([[b[1], b[0]], [b[3], b[0]], [b[3], b[2]], [b[1], b[2]], [b[1], b[0]]]);
+      }
+
+      function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d }); }
+
+      function toGeoJSON(osm) {
+        var feats = [];
+        (osm.elements || []).forEach(function (el) {
+          if (el.type !== 'way' || !el.geometry || el.geometry.length < 4) { return; }
+          var t = el.tags || {};
+          if (EXCLUDE[t.parking]) { return; }
+          var ring = el.geometry.map(function (p) { return [p.lon, p.lat]; });
+          var f = ring[0], l = ring[ring.length - 1];
+          if (f[0] !== l[0] || f[1] !== l[1]) { return; }
+          var m2 = ringArea(ring);
+          feats.push({ type: 'Feature', id: el.id,
+            properties: { osm_id: el.id, name: t.name || '', parking: t.parking || '未标注类型', access: t.access || '', fee: t.fee || '', m2: m2 },
+            geometry: { type: 'Polygon', coordinates: [ring] } });
+        });
+        return { type: 'FeatureCollection', features: feats };
+      }
+
+      function fetchLots(city) {
+        var cacheKey = 'lots-v1-' + city.id;
+        var cached = store(cacheKey);
+        if (cached) { try { return Promise.resolve(JSON.parse(cached)); } catch (e) {} }
+        var b = city.bbox;
+        var q = '[out:json][timeout:25];way["amenity"="parking"](' + b.join(',') + ');out geom;';
+        var tryAt = function (i) {
+          if (i >= OVERPASS.length) { return Promise.reject(new Error('all endpoints failed')); }
+          return fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+            .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+            .catch(function () { return tryAt(i + 1); });
+        };
+        return tryAt(0).then(function (osm) {
+          var gj = toGeoJSON(osm);
+          store(cacheKey, JSON.stringify(gj));
+          return gj;
+        });
+      }
+
+      function renderPanel(city, gj) {
+        if (!gj) {
+          panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown</p><p class="loading">正在读取 OpenStreetMap 停车场数据…</p>';
+          return;
+        }
+        var total = gj.features.reduce(function (s, f) { return s + f.properties.m2; }, 0);
+        var share = total / bboxArea(city.bbox) * 100;
+        panel.innerHTML =
+          '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown 示意范围</p>' +
+          '<div class="stat"><div class="k">停车场数量</div><div class="v">' + gj.features.length + '<small>处</small></div></div>' +
+          '<div class="stat"><div class="k">停车场总面积</div><div class="v">' + fmt(total / M2_PER_ACRE, 1) + '<small>acres</small></div></div>' +
+          '<div class="stat"><div class="k">占示意范围比例</div><div class="v">' + fmt(share, 1) + '<small>%</small></div></div>' +
+          '<p class="note">数据为 OSM 已标注的地面停车场，可能漏标，面积为下限，不是模型结果。</p>';
+      }
+
+      function showError(city) {
+        panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + '</p><p class="loading">暂时读取不到 OSM 数据，请稍后再点一次。</p>';
+      }
+
+      function selectCity(city) {
+        active = city;
+        Array.prototype.forEach.call(strip.children, function (b) { b.classList.toggle('active', b.dataset.id === city.id); });
+        panel.classList.add('show');
+        renderPanel(city, null);
+        var b = city.bbox;
+        map.fitBounds([[b[1], b[0]], [b[3], b[2]]], { padding: { top: 120, bottom: 140, left: 60, right: 360 }, duration: 1600, essential: true });
+        fetchLots(city).then(function (gj) {
+          if (active !== city) { return; }
+          map.getSource('lots').setData(gj);
+          renderPanel(city, gj);
+        }).catch(function () { if (active === city) { showError(city); } });
+      }
+
+      function overview() {
+        active = null;
+        panel.classList.remove('show');
+        Array.prototype.forEach.call(strip.children, function (b) { b.classList.remove('active'); });
+        map.flyTo({ center: OVERVIEW.center, zoom: OVERVIEW.zoom, duration: 1400, essential: true });
+      }
+
+      map.on('load', function () {
+        map.addSource('lots', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots',
+          paint: { 'fill-color': '#ff8a3d', 'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.85, 0.55] } });
+        map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', paint: { 'line-color': '#ffb27d', 'line-width': 0.8 } });
+
+        fetch('data/cities.json').then(function (r) { return r.json(); }).then(function (list) {
+          cities = list;
+          map.addSource('cities', { type: 'geojson', data: { type: 'FeatureCollection', features: list.map(function (c) {
+            return { type: 'Feature', properties: { id: c.id }, geometry: { type: 'Point', coordinates: c.center } }; }) } });
+          map.addLayer({ id: 'city-glow', type: 'circle', source: 'cities', maxzoom: 12,
+            paint: { 'circle-radius': 16, 'circle-color': '#ff8a3d', 'circle-opacity': 0.18, 'circle-blur': 0.6 } });
+          map.addLayer({ id: 'city-dot', type: 'circle', source: 'cities', maxzoom: 12,
+            paint: { 'circle-radius': 5.5, 'circle-color': '#ff8a3d', 'circle-stroke-color': '#0a0a0b', 'circle-stroke-width': 1.5 } });
+
+          list.forEach(function (c) {
+            var b = document.createElement('button');
+            b.className = 'city'; b.dataset.id = c.id;
+            b.innerHTML = '<div class="dots"><i></i><i></i></div><div class="name">' + c.name + '</div><div class="state">' + c.state + '</div>';
+            b.addEventListener('click', function () { selectCity(c); });
+            strip.appendChild(b);
+          });
+        });
+
+        map.on('click', 'city-dot', function (e) {
+          var id = e.features[0].properties.id;
+          var c = cities.filter(function (x) { return x.id === id; })[0];
+          if (c) { selectCity(c); }
+        });
+        ['city-dot', 'lots-fill'].forEach(function (l) {
+          map.on('mouseenter', l, function () { map.getCanvas().style.cursor = 'pointer'; });
+          map.on('mouseleave', l, function () { map.getCanvas().style.cursor = ''; });
+        });
+
+        var hovered = null;
+        map.on('mousemove', 'lots-fill', function (e) {
+          if (hovered !== null) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); }
+          hovered = e.features[0].id;
+          map.setFeatureState({ source: 'lots', id: hovered }, { hover: true });
+        });
+        map.on('mouseleave', 'lots-fill', function () {
+          if (hovered !== null) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); }
+          hovered = null;
+        });
+
+        map.on('click', 'lots-fill', function (e) {
+          var p = e.features[0].properties, m2 = Number(p.m2);
+          var html = '<b>' + (p.name || '地面停车场') + '</b><br>' +
+            '面积约 ' + fmt(m2 * SQFT_PER_M2, 0) + ' sq ft（' + fmt(m2 / M2_PER_ACRE, 2) + ' acres）<br>' +
+            '类型：' + p.parking + (p.fee ? ' · 收费：' + p.fee : '') + (p.access ? ' · 开放：' + p.access : '') + '<br>' +
+            '<span style="color:rgba(245,245,247,0.45)">OSM way ' + p.osm_id + '</span>';
+          new maplibregl.Popup({ closeButton: true, maxWidth: '260px' }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+        });
+      });
+
+      document.getElementById('btn-overview').addEventListener('click', overview);
+      document.getElementById('btn-lots').addEventListener('click', function () {
+        lotsVisible = !lotsVisible;
+        this.classList.toggle('on', lotsVisible);
+        ['lots-fill', 'lots-line'].forEach(function (l) { map.setLayoutProperty(l, 'visibility', lotsVisible ? 'visible' : 'none'); });
+      });
+      var about = document.getElementById('about');
+      document.getElementById('btn-about').addEventListener('click', function () { about.classList.add('show'); });
+      document.getElementById('btn-close').addEventListener('click', function () { about.classList.remove('show'); });
+      about.addEventListener('click', function (e) { if (e.target === about) { about.classList.remove('show'); } });
+    })();
+  </script>
+</body>
+</html>
