@@ -44,6 +44,8 @@ NOT_SURFACE = {"underground", "multi-storey", "rooftop", "garage", "garages",
                "layby"}
 
 NAMES = {
+    "atlanta": ("Atlanta", "GA"), "lasvegas": ("Las Vegas", "NV"), "saltlakecity": ("Salt Lake City", "UT"),
+    "minneapolis": ("Minneapolis", "MN"), "washington": ("Washington", "DC"),
     "baltimore": ("Baltimore", "MD"), "boston": ("Boston", "MA"), "charlotte": ("Charlotte", "NC"),
     "chicago": ("Chicago", "IL"), "cleveland": ("Cleveland", "OH"), "dallas": ("Dallas", "TX"),
     "denver": ("Denver", "CO"), "detroit": ("Detroit", "MI"), "houston": ("Houston", "TX"),
@@ -291,6 +293,11 @@ def build_city(cid, b, core, osm):
 def main():
     bounds = json.loads((RAW / "dpf_boundaries.json").read_text())["cities"]
     cores = json.loads((RAW / "dpf_cores.json").read_text())
+    extra = RAW / "dpf_boundaries_2.json"
+    if extra.exists():
+        for k, v in json.loads(extra.read_text()).items():
+            cores[k] = v.pop("core")
+            bounds[k] = v
     (OUT / "cities").mkdir(parents=True, exist_ok=True)
     index, manifest = [], {"built": date.today().isoformat(), "thresholds": {
         "minAcres": MIN_ACRES, "coreMaxMi": 0.5, "transitMaxMi": 0.25, "densityRadiusMi": 0.25,
@@ -302,6 +309,8 @@ def main():
             continue
         city = build_city(cid, bounds[cid], cores[cid], json.loads(f.read_text()))
         for l in city["lots"]:
+            if l["acresInside"] == l["acres"]:
+                del l["acresInside"]
             for k in [k for k, v in l.items() if v is None or v == []]:
                 del l[k]
         text = json.dumps(city, separators=(",", ":"))
