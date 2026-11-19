@@ -71,7 +71,7 @@
     .pill.on { background: var(--ink); color: #0d0d0e; }
 
     /* ---------- side panel ---------- */
-    .panel { position: fixed; top: 80px; left: 20px; width: 340px; max-height: calc(100% - 80px - 156px); z-index: 10;
+    .panel { position: fixed; top: 80px; left: 20px; width: 340px; max-height: calc(100% - 80px - 190px); z-index: 10;
       overflow-y: auto; scrollbar-width: none; padding: 22px 22px 18px; }
     .panel::-webkit-scrollbar { display: none; }
     .panel h2 { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; margin: 6px 0 2px; }
@@ -125,6 +125,10 @@
     .rail { position: fixed; left: 20px; right: 20px; bottom: 20px; z-index: 10; padding: 10px; }
     .track { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; scroll-behavior: auto; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); padding: 0 30px; }
     .track::-webkit-scrollbar { display: none; }
+    .letters { display: flex; gap: 2px; padding: 2px 30px 8px; flex-wrap: wrap; }
+    .letters button { border: 0; background: transparent; color: var(--ink-3); font-size: 11.5px; font-weight: 500; letter-spacing: .04em;
+      min-width: 24px; height: 24px; border-radius: 7px; cursor: pointer; transition: background .2s, color .2s; }
+    .letters button:hover, .letters button.on { color: var(--ink); background: rgba(255,255,255,0.1); }
     .card { flex: 0 0 156px; text-align: left; border: 0; background: transparent; border-radius: 14px; padding: 12px 14px; cursor: pointer; transition: background .3s, transform .3s var(--ease); }
     .card:hover { background: rgba(255,255,255,0.06); }
     .card.on { background: rgba(255,255,255,0.12); }
@@ -165,9 +169,11 @@
     .pp .row span:first-child { color: var(--ink-2); }
     .pp .lab { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: 10px 0 4px; }
     .ok { color: var(--cand); } .no { color: var(--ink-3); } .nv { color: var(--ink-3); font-style: italic; }
-    .maplibregl-ctrl-attrib { background: rgba(13,13,14,0.6) !important; color: var(--ink-3); font-family: var(--font); }
-    .maplibregl-ctrl-attrib a { color: var(--ink-2) !important; }
-    .maplibregl-ctrl-bottom-right { bottom: 132px; }
+    .maplibregl-ctrl-attrib { background: transparent !important; color: rgba(245,245,247,0.22) !important; font-family: var(--font); font-size: 9px; }
+    .maplibregl-ctrl-attrib a { color: rgba(245,245,247,0.28) !important; }
+    .maplibregl-ctrl-attrib.maplibregl-compact { min-height: 18px; }
+    .maplibregl-ctrl-attrib-button { opacity: 0.25; transform: scale(.75); }
+    .maplibregl-ctrl-bottom-right { bottom: 160px; right: 14px; }
 
     @media (max-width: 760px) {
       .rqs { grid-template-columns: 1fr; }
@@ -175,11 +181,13 @@
       .topbar { top: 12px; left: 12px; right: 12px; }
       .brand span { display: none; }
       .pill { padding: 7px 11px; font-size: 12px; }
-      .panel { top: auto; left: 12px; right: 12px; bottom: 112px; width: auto; max-height: 46vh; padding: 18px; border-radius: 20px; }
+      .panel { top: auto; left: 12px; right: 12px; bottom: 140px; width: auto; max-height: 46vh; padding: 18px; border-radius: 20px; }
       .big { font-size: 44px; }
       .rail { left: 12px; right: 12px; bottom: 12px; padding: 6px; }
       .card { flex-basis: 132px; padding: 10px 12px; }
       .track { padding: 0 10px; }
+      .letters { padding: 0 8px 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      .letters button { min-width: 22px; height: 22px; font-size: 11px; }
       .maplibregl-ctrl-bottom-right { bottom: auto; top: 56px; }
       .sheet .body { padding: 26px 22px; }
     }
@@ -191,13 +199,9 @@
   <!-- landing -->
   <section class="hero" id="hero">
     <div class="hero-inner">
-      <p class="eyebrow">Research project · 24 U.S. downtowns</p>
+      <p class="eyebrow">Urban research project</p>
       <h1>Downtown <b>Parking</b> Footprint</h1>
-      <p class="lede">Surface parking lots in 24 major U.S. downtowns, measured and screened as redevelopment candidates.</p>
-      <div class="rqs">
-        <div class="rq"><p class="eyebrow">Question 1 · Footprint</p><p>How much downtown land is surface parking, and how does that differ across cities?</p></div>
-        <div class="rq"><p class="eyebrow">Question 2 · Candidates</p><p>Which surface lots screen as candidates for future redevelopment?</p></div>
-      </div>
+      <p class="lede">A map of how much downtown land U.S. cities give to surface parking, measured lot by lot from open data. Each lot is also screened as a possible redevelopment candidate.</p>
       <button class="cta" id="enter">Explore the map</button>
       <p class="meta">Data: OpenStreetMap contributors (lots fetched 2026-11-19) · U.S. Census Bureau LEHD LODES 8 (jobs, 2023)<br>Figures are measurements of mapped lots and screening results, not recommendations.</p>
     </div>
@@ -215,7 +219,7 @@
 
   <aside class="panel glass ui" id="panel"><p class="caption">Loading cities…</p></aside>
 
-  <footer class="rail glass ui"><div class="track" id="track" role="list"></div></footer>
+  <footer class="rail glass ui"><nav class="letters" id="letters" aria-label="Jump to cities by first letter"></nav><div class="track" id="track" role="list"></div></footer>
 
   <!-- sheets -->
   <section class="sheet" id="sheet-method"><div class="body glass">
@@ -265,7 +269,7 @@
   <section class="sheet" id="sheet-about"><div class="body glass">
     <button class="close" data-close>Close</button>
     <p class="eyebrow">About</p><h3>Downtown Parking Footprint</h3>
-    <p>American downtowns devote a large amount of central land to surface parking. This project measures that land in 24 downtowns and screens individual lots as candidates for future redevelopment, to give city building a direction backed by evidence.</p>
+    <p>American downtowns devote a large amount of central land to surface parking. This project measures that land in major U.S. downtowns and screens individual lots as candidates for future redevelopment, to give city building a direction backed by evidence.</p>
     <p>It is a course research project in urban spatial analytics. Next steps: a U-Net segmentation model trained on NAIP aerial imagery to find lots missing from OpenStreetMap, and zoning data read with a language model to check the fifth criterion.</p>
     <h4>Data and credits</h4>
     <ul>
@@ -288,6 +292,8 @@
     var state = { cities: [], byId: {}, data: {}, active: null, mode: 'footprint', minScore: 3, minAcres: 0, mapReady: false };
     var panel = document.getElementById('panel');
     var track = document.getElementById('track');
+    var letters = document.getElementById('letters');
+    var COPIES = 3, setWidth = 0;
 
     function fmt(n, d) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
     function pct(x, d) { return fmt(x * 100, d === undefined ? 1 : d) + '%'; }
@@ -295,7 +301,7 @@
     function narrow() { return window.innerWidth <= 760; }
     function pad() {
       return narrow() ? { top: 70, bottom: Math.round(window.innerHeight * 0.46) + 120, left: 24, right: 24 }
-                      : { top: 90, bottom: 150, left: 390, right: 60 };
+                      : { top: 90, bottom: 190, left: 390, right: 60 };
     }
 
     /* ---------------- map ---------------- */
@@ -347,8 +353,7 @@
       map.addSource('lots', { type: 'geojson', data: EMPTY, promoteId: 'id' });
       map.addSource('core', { type: 'geojson', data: EMPTY });
 
-      map.addLayer({ id: 'outline-fill', type: 'fill', source: 'outline', paint: { 'fill-color': '#fff', 'fill-opacity': 0.025 } });
-      map.addLayer({ id: 'outline-line', type: 'line', source: 'outline', paint: { 'line-color': '#fff', 'line-opacity': 0.75, 'line-width': 1, 'line-dasharray': [2, 2] } });
+      map.addLayer({ id: 'outline-fill', type: 'fill', source: 'outline', paint: { 'fill-color': '#fff', 'fill-opacity': 0.03 } });
       map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots', paint: { 'fill-color': '#ff8a3d', 'fill-opacity': 0.55 } });
       map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', paint: { 'line-color': '#ffb27f', 'line-opacity': 0.85, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 17, 1.2] } });
       map.addLayer({ id: 'lots-hi', type: 'line', source: 'lots', paint: { 'line-color': '#fff', 'line-width': 2.2,
@@ -401,6 +406,7 @@
       return fetch('data/cities/' + id + '.json').then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); }).then(function (d) {
         d.lotById = {};
         d.geo = { type: 'FeatureCollection', features: d.lots.map(function (l) {
+          if (l.acresInside == null) { l.acresInside = l.acres; }
           d.lotById[l.id] = l;
           var rings = l.outer.map(decodeRing), holes = (l.inner || []).map(decodeRing);
           var geom = rings.length === 1 ? { type: 'Polygon', coordinates: [rings[0]].concat(holes) }
@@ -423,13 +429,55 @@
     /* ---------------- carousel ---------------- */
     function renderRail() {
       var maxShare = Math.max.apply(null, state.cities.map(function (c) { return c.stats.share; }));
-      track.innerHTML = state.cities.map(function (c) {
+      var one = state.cities.map(function (c) {
         return '<button class="card" role="listitem" data-id="' + c.id + '"><div class="nm">' + esc(c.name) + '</div><div class="st">' + c.state + ' · ' + fmt(c.stats.downtownSqMi, 1) + ' sq mi</div>' +
           '<div class="sh"><div class="t"><div class="f" style="width:' + (c.stats.share / maxShare * 100) + '%"></div></div>' + pct(c.stats.share) + '</div></button>';
       }).join('');
+      // Three copies make an endless loop: the view always sits in the middle copy.
+      var html = ''; for (var k = 0; k < COPIES; k++) { html += one; }
+      track.innerHTML = html;
       Array.prototype.forEach.call(track.children, function (b) {
         b.addEventListener('click', function () { selectCity(b.getAttribute('data-id')); });
       });
+      var seen = {};
+      letters.innerHTML = state.cities.map(function (c) {
+        var L = c.name.charAt(0).toUpperCase();
+        if (seen[L]) { return ''; } seen[L] = c.id;
+        return '<button data-l="' + L + '" data-id="' + c.id + '" title="Cities starting with ' + L + '">' + L + '</button>';
+      }).join('');
+      Array.prototype.forEach.call(letters.children, function (b) {
+        b.addEventListener('click', function () {
+          Array.prototype.forEach.call(letters.children, function (x) { x.classList.toggle('on', x === b); });
+          scrollToCard(b.getAttribute('data-id'), true);
+        });
+      });
+      requestAnimationFrame(measure);
+      setTimeout(measure, 300);
+    }
+
+    function measure() {
+      var n = state.cities.length;
+      if (!n || track.children.length < 2 * n) { return; }
+      setWidth = track.children[n].offsetLeft - track.children[0].offsetLeft;
+      if (setWidth > 0 && track.scrollLeft < setWidth * 0.5) { track.scrollLeft += setWidth; }
+    }
+    window.addEventListener('resize', measure);
+
+    track.addEventListener('scroll', function () {
+      if (!setWidth) { return; }
+      if (track.scrollLeft < setWidth * 0.5) { track.scrollLeft += setWidth; }
+      else if (track.scrollLeft > setWidth * 1.5) { track.scrollLeft -= setWidth; }
+    }, { passive: true });
+
+    // Bring a city's card (middle copy) to the left edge of the rail.
+    function scrollToCard(id, smooth) {
+      var n = state.cities.length, idx = -1;
+      for (var i = 0; i < n; i++) { if (state.cities[i].id === id) { idx = i; break; } }
+      if (idx < 0 || !setWidth) { measure(); }
+      if (idx < 0) { return; }
+      var b = track.children[n + idx];
+      var target = b.offsetLeft - track.children[n].offsetLeft + setWidth - 24;
+      track.scrollTo({ left: target, behavior: smooth ? 'smooth' : 'auto' });
     }
 
     // Hover-driven scrolling: pointer left of centre scrolls toward the start, right of centre toward the end;
@@ -448,7 +496,7 @@
         var t = ((e.clientX - r.left) / r.width) * 2 - 1;       // -1 .. 1
         var dead = 0.18;
         var m = Math.abs(t) < dead ? 0 : (Math.abs(t) - dead) / (1 - dead);
-        vx = Math.sign(t) * Math.pow(m, 1.6) * 14;               // px per frame
+        vx = Math.sign(t) * Math.pow(m, 1.6) * 15.4;               // px per frame
         hovering = true;
         if (!raf) { raf = requestAnimationFrame(step); }
       });
@@ -456,16 +504,13 @@
     })();
 
     function markCard(id) {
+      var visible = false, r = track.getBoundingClientRect();
       Array.prototype.forEach.call(track.children, function (b) {
         var on = b.getAttribute('data-id') === id;
         b.classList.toggle('on', on);
-        if (on) {
-          var r = track.getBoundingClientRect(), br = b.getBoundingClientRect();
-          if (br.left < r.left + 40 || br.right > r.right - 40) {
-            track.scrollTo({ left: track.scrollLeft + (br.left - r.left) - r.width / 2 + br.width / 2, behavior: 'smooth' });
-          }
-        }
+        if (on) { var br = b.getBoundingClientRect(); if (br.left >= r.left + 30 && br.right <= r.right - 30) { visible = true; } }
       });
+      if (id && !visible) { scrollToCard(id, true); }
     }
 
     /* ---------------- overview panel ---------------- */
@@ -474,7 +519,7 @@
       var maxShare = cs[0].stats.share;
       var totLots = 0, totAcres = 0;
       state.cities.forEach(function (c) { totLots += c.stats.lots; totAcres += c.stats.parkingAcres; });
-      panel.innerHTML = '<div class="fadein"><p class="eyebrow">All downtowns</p><h2>24 cities</h2><p class="sub">Measurement · OSM-mapped surface lots</p>' +
+      panel.innerHTML = '<div class="fadein"><p class="eyebrow">All downtowns</p><h2>' + state.cities.length + ' cities</h2><p class="sub">Measurement · OSM-mapped surface lots</p>' +
         '<div class="grid2"><div class="cellk"><div class="k">Mapped lots</div><div class="v">' + fmt(totLots) + '</div></div>' +
         '<div class="cellk"><div class="k">Parking area</div><div class="v">' + fmt(totAcres) + '<small>acres</small></div></div></div>' +
         '<p class="h3"><span>Share of downtown land</span><span>Measurement</span></p><ul class="ranks">' +
@@ -578,7 +623,7 @@
         '<div class="cellk"><div class="k">Downtown</div><div class="v">' + fmt(s.downtownAcres) + '<small>acres</small></div></div></div>' +
         '<p class="h3"><span>Lots by size</span><span>Count · acres inside</span></p><div class="bars">' +
         row('&lt; 0.5 acre', b.lt0_5) + row('0.5–2 acres', b['0_5to2']) + row('&gt; 2 acres', b.gt2) + '</div>' +
-        '<p class="note">Lower bound: OSM-mapped lots only. Dashed line: downtown boundary. Ring: downtown core (densest jobs). OSM data fetched ' + d.osmFetched + '.</p>';
+        '<p class="note">Lower bound: OSM-mapped lots only. Lighter area: downtown boundary. Ring: downtown core (densest jobs). OSM data fetched ' + d.osmFetched + '.</p>';
     }
 
     function candidatesHtml(d) {
