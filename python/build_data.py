@@ -314,7 +314,7 @@ def main():
             "downtownCells": len(bounds[cid]["cells"]), "osmFetched": city["osmFetched"]}
         print(f"{cid:14s} lots={s['lots']:5d} parking={s['parkingAcres']:7.1f} ac share={s['share']*100:5.1f}% "
               f"score4={s['candidates'][4]:3d} {len(text)/1024:6.0f} KB")
-    text = json.dumps({"built": manifest["built"], "cities": index}, separators=(",", ":"))
+    text = json.dumps({"built": manifest["built"], "osmFetched": max(v["osmFetched"] for k, v in manifest["files"].items() if k.startswith("cities/")), "cities": index}, separators=(",", ":"))
     (OUT / "index.json").write_text(text, encoding="utf-8")
     manifest["files"]["index.json"] = {"sha256": hashlib.sha256(text.encode()).hexdigest(), "bytes": len(text)}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")

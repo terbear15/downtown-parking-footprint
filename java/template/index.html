@@ -2,354 +2,696 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Surface Parking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Downtown Parking Footprint</title>
+  <meta name="description" content="How much downtown land U.S. cities give to surface parking, and which lots screen as redevelopment candidates.">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <style>
     :root {
+      --bg-0: #0d0d0e;
+      --bg-1: #1b1b1d;
       --ink: #f5f5f7;
-      --ink-2: rgba(245, 245, 247, 0.62);
-      --ink-3: rgba(245, 245, 247, 0.38);
-      --glass: rgba(22, 22, 24, 0.55);
+      --ink-2: rgba(245, 245, 247, 0.66);
+      --ink-3: rgba(245, 245, 247, 0.40);
+      --glass: rgba(30, 30, 33, 0.52);
+      --glass-strong: rgba(28, 28, 31, 0.72);
       --line: rgba(255, 255, 255, 0.12);
-      --accent: #ff8a3d;
+      --lot: #ff8a3d;
+      --cand: #9fd8f0;
+      --ease: cubic-bezier(.22, .8, .2, 1);
+      --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: #0a0a0b; color: var(--ink); overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", sans-serif;
+    html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); font-family: var(--font);
+      background: radial-gradient(120% 90% at 50% 0%, var(--bg-1) 0%, var(--bg-0) 70%);
       -webkit-font-smoothing: antialiased; }
+    button { font: inherit; color: inherit; }
     #map { position: fixed; inset: 0; }
 
-    .glass {
-      background: var(--glass);
-      -webkit-backdrop-filter: saturate(160%) blur(24px);
-      backdrop-filter: saturate(160%) blur(24px);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-    }
+    .glass { background: var(--glass); border: 1px solid var(--line); border-radius: 20px;
+      -webkit-backdrop-filter: saturate(150%) blur(28px); backdrop-filter: saturate(150%) blur(28px); }
+    .eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+    .tag { display: inline-block; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
 
-    /* top-left title */
-    .brand { position: fixed; top: 24px; left: 24px; padding: 22px 26px; width: 340px; z-index: 5; }
-    .eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; }
-    .brand h1 { font-size: 30px; font-weight: 300; letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 10px; }
-    .brand h1 b { font-weight: 600; }
-    .brand p { font-size: 13px; line-height: 1.55; color: var(--ink-2); margin: 0; }
+    /* ---------- hero ---------- */
+    .hero { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px;
+      background: rgba(16, 16, 18, 0.55);
+      -webkit-backdrop-filter: blur(26px) saturate(140%); backdrop-filter: blur(26px) saturate(140%);
+      transform: translateY(-100%); transition: transform 1.1s var(--ease); }
+    .hero.in { transform: translateY(0); }
+    .hero.out { transform: translateY(-100%); transition-duration: .9s; }
+    .hero-inner { width: min(760px, 100%); text-align: center; opacity: 0; transform: translateY(14px);
+      transition: opacity .8s ease .5s, transform .8s var(--ease) .5s; }
+    .hero.in .hero-inner { opacity: 1; transform: none; }
+    .hero h1 { font-size: clamp(40px, 7vw, 76px); font-weight: 300; letter-spacing: -0.035em; line-height: 1.02; margin: 18px 0 18px; }
+    .hero h1 b { font-weight: 700; }
+    .hero .lede { font-size: clamp(16px, 2vw, 19px); line-height: 1.5; color: var(--ink-2); margin: 0 auto 30px; max-width: 600px; }
+    .rqs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; margin: 0 auto 30px; max-width: 640px; }
+    .rq { padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }
+    .rq .eyebrow { margin-bottom: 6px; }
+    .rq p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
+    .cta { font-size: 15px; font-weight: 500; padding: 14px 30px; border-radius: 999px; border: 0; cursor: pointer;
+      background: var(--ink); color: #0d0d0e; transition: transform .25s var(--ease), opacity .25s; }
+    .cta:hover { transform: scale(1.03); }
+    .meta { margin-top: 22px; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
 
-    /* top-right actions */
-    .actions { position: fixed; top: 24px; right: 24px; display: flex; gap: 8px; z-index: 5; }
-    .btn {
-      font: inherit; font-size: 13px; color: var(--ink);
-      background: rgba(22, 22, 24, 0.45);
-      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.28);
-      border-radius: 999px; padding: 9px 18px; cursor: pointer;
-      transition: background .25s ease, border-color .25s ease, color .25s ease;
-    }
-    .btn:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.5); }
-    .btn.on { background: var(--ink); color: #0a0a0b; border-color: var(--ink); }
+    /* ---------- chrome ---------- */
+    .ui { opacity: 0; pointer-events: none; transition: opacity .6s ease .3s; }
+    body.entered .ui { opacity: 1; pointer-events: auto; }
+    .topbar { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 10; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+    .topbar > * { pointer-events: auto; }
+    .brand { background: none; border: 0; padding: 10px 4px; cursor: pointer; text-align: left; }
+    .brand b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+    .brand span { font-size: 15px; font-weight: 300; color: var(--ink-2); }
+    .nav { display: flex; gap: 6px; padding: 5px; border-radius: 999px; }
+    .pill { background: transparent; border: 0; border-radius: 999px; padding: 8px 15px; font-size: 13px; cursor: pointer; color: var(--ink-2);
+      transition: background .25s, color .25s; }
+    .pill:hover { color: var(--ink); background: rgba(255,255,255,0.08); }
+    .pill.on { background: var(--ink); color: #0d0d0e; }
 
-    /* bottom city strip */
-    .strip { position: fixed; left: 24px; right: 24px; bottom: 24px; padding: 14px; z-index: 5;
-      display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-    .strip::-webkit-scrollbar { display: none; }
-    .city {
-      flex: 1 0 150px; text-align: left; font: inherit; color: var(--ink);
-      background: transparent; border: 0; border-radius: 14px; padding: 12px 16px; cursor: pointer;
-      transition: background .25s ease;
-    }
-    .city:hover { background: rgba(255, 255, 255, 0.06); }
-    .city.active { background: rgba(255, 255, 255, 0.1); }
-    .city .dots { display: flex; gap: 4px; margin-bottom: 10px; }
-    .city .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
-    .city .dots i:first-child { background: var(--accent); }
-    .city .name { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
-    .city .state { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+    /* ---------- side panel ---------- */
+    .panel { position: fixed; top: 80px; left: 20px; width: 340px; max-height: calc(100% - 80px - 156px); z-index: 10;
+      overflow-y: auto; scrollbar-width: none; padding: 22px 22px 18px; }
+    .panel::-webkit-scrollbar { display: none; }
+    .panel h2 { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; margin: 6px 0 2px; }
+    .panel .sub { font-size: 12.5px; color: var(--ink-3); margin: 0 0 16px; }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.06); margin-bottom: 18px; }
+    .seg button { border: 0; background: transparent; border-radius: 999px; padding: 8px 0; font-size: 13px; cursor: pointer; color: var(--ink-2); transition: background .3s var(--ease), color .3s; }
+    .seg button.on { background: rgba(255,255,255,0.9); color: #0d0d0e; }
+    .big { font-size: 56px; font-weight: 200; letter-spacing: -0.04em; line-height: 1; }
+    .big small { font-size: 20px; font-weight: 300; color: var(--ink-2); margin-left: 2px; }
+    .caption { font-size: 12.5px; color: var(--ink-2); margin: 6px 0 18px; line-height: 1.45; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+    .cellk { background: rgba(20,20,22,0.75); padding: 12px 14px; }
+    .cellk .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+    .cellk .v { font-size: 19px; font-weight: 300; margin-top: 4px; letter-spacing: -0.01em; }
+    .cellk .v small { font-size: 11.5px; color: var(--ink-3); margin-left: 3px; }
+    .h3 { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
+    .bars { margin-bottom: 18px; }
+    .bar { display: grid; grid-template-columns: 82px 1fr 64px; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
+    .bar .track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .bar .fill { height: 100%; border-radius: 3px; background: var(--lot); transition: width .8s var(--ease); }
+    .bar .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .note { font-size: 11.5px; line-height: 1.55; color: var(--ink-3); margin: 10px 0 0; }
+    .ranks { list-style: none; padding: 0; margin: 0; }
+    .ranks li { display: grid; grid-template-columns: 1fr 120px 44px; align-items: center; gap: 10px; padding: 7px 8px; margin: 0 -8px; border-radius: 10px; font-size: 13px; cursor: pointer; }
+    .ranks li:hover { background: rgba(255,255,255,0.06); }
+    .ranks .num { text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 12px; }
 
-    /* right detail panel */
-    .panel { position: fixed; top: 92px; right: 24px; width: 300px; padding: 22px 24px; z-index: 5;
-      opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .35s ease, transform .35s ease; }
-    .panel.show { opacity: 1; transform: none; pointer-events: auto; }
-    .panel h2 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 4px; }
-    .panel .sub { font-size: 12px; color: var(--ink-3); margin: 0 0 18px; }
-    .stat { padding: 14px 0; border-top: 1px solid var(--line); }
-    .stat .k { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
-    .stat .v { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; margin-top: 4px; }
-    .stat .v small { font-size: 13px; color: var(--ink-2); margin-left: 4px; }
-    .note { font-size: 11.5px; line-height: 1.55; color: var(--ink-3); margin: 12px 0 0; }
-    .loading { font-size: 13px; color: var(--ink-2); }
+    .ctl { margin-bottom: 16px; }
+    .ctl label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-2); margin-bottom: 8px; }
+    .ctl label b { color: var(--ink); font-weight: 500; }
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.14); outline: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); cursor: pointer; border: 0; }
+    input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--ink); cursor: pointer; border: 0; }
+    .chips { display: flex; gap: 6px; }
+    .chips button { flex: 1; border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 7px 0; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+    .chips button.on { background: rgba(159,216,240,0.16); border-color: rgba(159,216,240,0.6); color: var(--ink); }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-2); margin-bottom: 14px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+    .list { list-style: none; padding: 0; margin: 0 0 14px; }
+    .list li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 9px 10px; margin: 0 -10px; border-radius: 10px; cursor: pointer; font-size: 12.5px; }
+    .list li:hover { background: rgba(255,255,255,0.06); }
+    .list .n { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list .d { color: var(--ink-3); font-size: 11.5px; margin-top: 2px; }
+    .list .s { color: var(--cand); font-variant-numeric: tabular-nums; align-self: center; }
+    .ghost { width: 100%; border: 1px solid var(--line); background: transparent; border-radius: 12px; padding: 10px 0; font-size: 13px; cursor: pointer; color: var(--ink); transition: background .25s; }
+    .ghost:hover { background: rgba(255,255,255,0.07); }
+    .fadein { animation: fadein .5s var(--ease); }
+    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-    /* about dialog */
-    .about { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.35); z-index: 20;
-      opacity: 0; pointer-events: none; transition: opacity .3s ease; }
-    .about.show { opacity: 1; pointer-events: auto; }
-    .about .card { width: min(520px, calc(100% - 48px)); padding: 28px 30px; }
-    .about h3 { font-size: 20px; font-weight: 500; margin: 0 0 12px; }
-    .about p { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); margin: 0 0 10px; }
-    .about .btn { margin-top: 8px; }
+    /* ---------- city carousel ---------- */
+    .rail { position: fixed; left: 20px; right: 20px; bottom: 20px; z-index: 10; padding: 10px; }
+    .track { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; scroll-behavior: auto; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); padding: 0 30px; }
+    .track::-webkit-scrollbar { display: none; }
+    .card { flex: 0 0 156px; text-align: left; border: 0; background: transparent; border-radius: 14px; padding: 12px 14px; cursor: pointer; transition: background .3s, transform .3s var(--ease); }
+    .card:hover { background: rgba(255,255,255,0.06); }
+    .card.on { background: rgba(255,255,255,0.12); }
+    .card .nm { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card .st { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+    .card .sh { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .card .sh .t { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.1); overflow: hidden; }
+    .card .sh .f { height: 100%; background: var(--lot); }
 
-    /* map popup */
-    .maplibregl-popup-content { background: rgba(22,22,24,0.85); color: var(--ink); border: 1px solid var(--line);
-      border-radius: 14px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5;
-      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    /* ---------- sheets (Method / Limitations / About) ---------- */
+    .sheet { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+    .sheet.show { opacity: 1; pointer-events: auto; }
+    .sheet .body { width: min(700px, 100%); max-height: calc(100% - 48px); overflow-y: auto; padding: 34px 38px; background: var(--glass-strong);
+      transform: translateY(16px) scale(.985); transition: transform .45s var(--ease); }
+    .sheet.show .body { transform: none; }
+    .sheet h3 { font-size: 30px; font-weight: 300; letter-spacing: -0.025em; margin: 6px 0 18px; }
+    .sheet h4 { font-size: 13px; font-weight: 700; margin: 22px 0 6px; }
+    .sheet p, .sheet li { font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+    .sheet p { margin: 0 0 10px; }
+    .sheet ul { padding-left: 18px; margin: 0 0 10px; }
+    .sheet code { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--ink); }
+    .sheet table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 12px; }
+    .sheet th, .sheet td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; }
+    .sheet th { color: var(--ink-3); font-weight: 500; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .sheet a { color: var(--ink); }
+    .close { position: sticky; top: 0; float: right; border: 1px solid var(--line); background: rgba(0,0,0,0.2); border-radius: 999px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; }
+
+    /* ---------- map popups ---------- */
+    .maplibregl-popup-content { background: rgba(24,24,27,0.88); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
+      padding: 14px 16px; font-family: var(--font); font-size: 12.5px; line-height: 1.5; min-width: 230px;
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 16px 48px rgba(0,0,0,0.45); }
     .maplibregl-popup-tip { display: none; }
-    .maplibregl-popup-close-button { color: var(--ink-2); font-size: 16px; right: 4px; top: 2px; }
-    .maplibregl-popup-content b { font-weight: 600; }
-    .maplibregl-ctrl-attrib { background: rgba(10,10,11,0.6) !important; color: var(--ink-3); }
+    .maplibregl-popup-close-button { color: var(--ink-2); font-size: 18px; right: 6px; top: 4px; }
+    .pp h5 { font-size: 15px; font-weight: 500; margin: 0 0 2px; padding-right: 16px; }
+    .pp .d { color: var(--ink-3); margin-bottom: 10px; }
+    .pp .row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid rgba(255,255,255,0.07); }
+    .pp .row span:first-child { color: var(--ink-2); }
+    .pp .lab { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: 10px 0 4px; }
+    .ok { color: var(--cand); } .no { color: var(--ink-3); } .nv { color: var(--ink-3); font-style: italic; }
+    .maplibregl-ctrl-attrib { background: rgba(13,13,14,0.6) !important; color: var(--ink-3); font-family: var(--font); }
     .maplibregl-ctrl-attrib a { color: var(--ink-2) !important; }
+    .maplibregl-ctrl-bottom-right { bottom: 132px; }
 
     @media (max-width: 760px) {
-      .brand { left: 12px; right: 12px; top: 12px; width: auto; padding: 16px 18px; }
-      .brand h1 { font-size: 22px; }
-      .brand p { display: none; }
-      .actions { top: auto; bottom: 118px; right: 12px; }
-      .panel { top: auto; bottom: 170px; left: 12px; right: 12px; width: auto; }
-      .strip { left: 12px; right: 12px; bottom: 12px; }
-      .city { flex-basis: 128px; }
+      .rqs { grid-template-columns: 1fr; }
+      .hero h1 { margin-top: 12px; }
+      .topbar { top: 12px; left: 12px; right: 12px; }
+      .brand span { display: none; }
+      .pill { padding: 7px 11px; font-size: 12px; }
+      .panel { top: auto; left: 12px; right: 12px; bottom: 112px; width: auto; max-height: 46vh; padding: 18px; border-radius: 20px; }
+      .big { font-size: 44px; }
+      .rail { left: 12px; right: 12px; bottom: 12px; padding: 6px; }
+      .card { flex-basis: 132px; padding: 10px 12px; }
+      .track { padding: 0 10px; }
+      .maplibregl-ctrl-bottom-right { bottom: auto; top: 56px; }
+      .sheet .body { padding: 26px 22px; }
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="map" aria-label="Map of U.S. downtowns and surface parking lots"></div>
 
-  <section class="brand glass">
-    <p class="eyebrow">Urban AI · Demo</p>
-    <h1>How much of downtown is <b>parking</b>?</h1>
-    <p>Pick a city, or zoom into any downtown, to see the parcels taken up by surface parking. Lots shown are mapped in OpenStreetMap today; model predictions come next.</p>
+  <!-- landing -->
+  <section class="hero" id="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Research project · 24 U.S. downtowns</p>
+      <h1>Downtown <b>Parking</b> Footprint</h1>
+      <p class="lede">Surface parking lots in 24 major U.S. downtowns, measured and screened as redevelopment candidates.</p>
+      <div class="rqs">
+        <div class="rq"><p class="eyebrow">Question 1 · Footprint</p><p>How much downtown land is surface parking, and how does that differ across cities?</p></div>
+        <div class="rq"><p class="eyebrow">Question 2 · Candidates</p><p>Which surface lots screen as candidates for future redevelopment?</p></div>
+      </div>
+      <button class="cta" id="enter">Explore the map</button>
+      <p class="meta">Data: OpenStreetMap contributors (lots fetched {{DATA_DATE}}) · U.S. Census Bureau LEHD LODES 8 (jobs, 2023)<br>Figures are measurements of mapped lots and screening results, not recommendations.</p>
+    </div>
   </section>
 
-  <nav class="actions">
-    <button class="btn" id="btn-overview">Overview</button>
-    <button class="btn on" id="btn-lots">Lots</button>
-    <button class="btn" id="btn-about">About</button>
-  </nav>
+  <!-- chrome -->
+  <header class="topbar ui">
+    <button class="brand" id="home" title="Back to all cities"><b>Downtown Parking</b> <span>Footprint</span></button>
+    <nav class="nav glass">
+      <button class="pill" data-sheet="method">Method</button>
+      <button class="pill" data-sheet="limits">Limitations</button>
+      <button class="pill" data-sheet="about">About</button>
+    </nav>
+  </header>
 
-  <aside class="panel glass" id="panel"></aside>
+  <aside class="panel glass ui" id="panel"><p class="caption">Loading cities…</p></aside>
 
-  <footer class="strip glass" id="strip"></footer>
+  <footer class="rail glass ui"><div class="track" id="track" role="list"></div></footer>
 
-  <div class="about" id="about">
-    <div class="card glass">
-      <h3>About this demo</h3>
-      <p>Orange shapes are surface lots tagged <code>amenity=parking</code> in OpenStreetMap, downloaded {{DATA_DATE}}. OSM misses some lots, so these areas are a lower bound, not a final result.</p>
-      <p>Each city uses a rough downtown box, not an official boundary. These lots will be replaced by predictions from a U-Net trained on NAIP aerial imagery.</p>
-      <p>Real-time occupancy (whether a lot is empty) cannot be read from aerial imagery or OSM, so it is not shown.</p>
-      <p style="color: var(--ink-3); font-size: 12px;">Build {{BUILD_DATE}}</p>
-      <button class="btn" id="btn-close">Close</button>
-    </div>
-  </div>
+  <!-- sheets -->
+  <section class="sheet" id="sheet-method"><div class="body glass">
+    <button class="close" data-close>Close</button>
+    <p class="eyebrow">Method</p><h3>How the numbers are made</h3>
+    <h4>Downtown boundary (one rule for every city)</h4>
+    <p>Downtown is where jobs are most concentrated. Jobs per census block come from the U.S. Census Bureau's LEHD Origin-Destination Employment Statistics (LODES 8, workplace area characteristics, all jobs, 2023; Detroit uses 2021, the latest year published for Michigan). Each block's jobs are assigned to a 250 m grid cell. A cell's density is the mean of its 3 × 3 neighbourhood in jobs per acre.</p>
+    <p>Downtown is the 4-connected group of cells with at least <b>25 jobs per acre</b> that contains the densest cell within 3 km of city hall. Enclosed gaps are filled. The densest cell is the <b>downtown core</b> used in Question 2.</p>
+    <p><b>Exception:</b> New York uses all of Manhattan (New York County): every 250 m cell that contains a 2020 census block centroid in the borough. Its core is set at Grand Central (Midtown).</p>
+    <h4>Question 1 · Footprint (measurement)</h4>
+    <ul>
+      <li><b>Surface lots:</b> OpenStreetMap areas tagged <code>amenity=parking</code> whose <code>parking</code> tag is <code>surface</code> or missing. Multi-storey, underground, rooftop, garage and street-side parking are excluded.</li>
+      <li><b>Parking area:</b> the part of each lot inside the downtown boundary, clipped cell by cell.</li>
+      <li><b>Share:</b> parking area ÷ downtown area. Downtown area is the number of cells × 250 m × 250 m and includes streets, parks and some water at the edges.</li>
+      <li><b>Size groups</b> use each lot's full area: under 0.5 acre, 0.5–2 acres, over 2 acres.</li>
+      <li><b>Units:</b> 1 acre = 43,560 sq ft = 4,046.86 m². Areas are computed in a local flat projection per city.</li>
+    </ul>
+    <h4>Question 2 · Candidates (screening)</h4>
+    <table>
+      <tr><th>Criterion</th><th>Passes when</th><th>Source</th></tr>
+      <tr><td>Size</td><td>Lot area ≥ 1.5 acres</td><td>OSM</td></tr>
+      <tr><td>Near the core</td><td>Lot centre ≤ 0.5 mile from the downtown core</td><td>LODES + OSM</td></tr>
+      <tr><td>Transit access</td><td>A bus stop, rail or tram stop ≤ 0.25 mile away</td><td>OSM</td></tr>
+      <tr><td>Dense surroundings</td><td>Building coverage within 0.25 mile (excluding the lot itself) is above that downtown's median</td><td>OSM buildings</td></tr>
+      <tr><td>Zoning allows high density</td><td><i>Not verified in this version</i></td><td>Next phase</td></tr>
+    </table>
+    <p>The <b>score</b> is the number of the four verified criteria a lot passes (0–4). It is a screening result. It does not say a lot can or should be redeveloped.</p>
+    <h4>Reproducibility</h4>
+    <p>Python computes every figure from the raw downloads and writes <code>data/manifest.json</code> with lot counts, totals and SHA-256 hashes of each data file. Java stamps the build and writes this page. Build {{BUILD_DATE}}.</p>
+  </div></section>
+
+  <section class="sheet" id="sheet-limits"><div class="body glass">
+    <button class="close" data-close>Close</button>
+    <p class="eyebrow">Limitations</p><h3>What these numbers cannot tell you</h3>
+    <ul>
+      <li><b>Lower bound.</b> Only lots that volunteers have mapped in OpenStreetMap are counted. Unmapped lots are missing, so real parking area is likely higher. Coverage differs by city. The next phase trains a segmentation model on aerial imagery to find unmapped lots.</li>
+      <li><b>Denominator.</b> Downtown area includes streets, parks and, at the edges, some water, so the share is of all downtown land, not of buildable parcels.</li>
+      <li><b>Boundary rule.</b> A different job-density threshold or cell size would give different boundaries. Manhattan is a special case and is not directly comparable with the other cities.</li>
+      <li><b>Lots crossing the boundary</b> count only the area inside it. Size groups and the size criterion use the full lot.</li>
+      <li><b>Transit.</b> Bus stops are dense downtown, so the transit criterion passes for most lots. Distance to rail is shown separately.</li>
+      <li><b>Building coverage</b> depends on how completely OSM maps buildings in each city.</li>
+      <li><b>Not verified:</b> zoning, ownership, contamination, historic designation, leases and whether a lot serves a nearby use. A candidate is not a feasible site.</li>
+      <li><b>No occupancy.</b> Whether a lot is full or empty cannot be read from OSM or aerial imagery, so it is not shown.</li>
+    </ul>
+  </div></section>
+
+  <section class="sheet" id="sheet-about"><div class="body glass">
+    <button class="close" data-close>Close</button>
+    <p class="eyebrow">About</p><h3>Downtown Parking Footprint</h3>
+    <p>American downtowns devote a large amount of central land to surface parking. This project measures that land in 24 downtowns and screens individual lots as candidates for future redevelopment, to give city building a direction backed by evidence.</p>
+    <p>It is a course research project in urban spatial analytics. Next steps: a U-Net segmentation model trained on NAIP aerial imagery to find lots missing from OpenStreetMap, and zoning data read with a language model to check the fifth criterion.</p>
+    <h4>Data and credits</h4>
+    <ul>
+      <li>Parking lots, buildings and transit stops © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>, available under the Open Database License (ODbL).</li>
+      <li>Jobs: U.S. Census Bureau, <a href="https://lehd.ces.census.gov/data/" target="_blank" rel="noopener">LEHD Origin-Destination Employment Statistics</a> (LODES 8).</li>
+      <li>Base map tiles: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © OpenMapTiles, data © OpenStreetMap. Rendering: <a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre GL JS</a>.</li>
+    </ul>
+    <p style="font-size:12px;color:var(--ink-3)">Build {{BUILD_DATE}} · Lots fetched {{DATA_DATE}}</p>
+  </div></section>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script>
-    (function () {
-      var CONUS = [[-125.5, 23.5], [-66.0, 49.8]];
-      var LIMIT = [[-135, 18], [-55, 54]];
-      var SQFT_PER_M2 = 10.7639, M2_PER_ACRE = 4046.86;
+  (function () {
+    'use strict';
+    var CONUS = [[-125.5, 23.5], [-66.0, 49.8]];
+    var LIMIT = [[-140, 15], [-50, 56]];
+    var SQFT_PER_ACRE = 43560;
+    var FLY_MS = 2000;
 
-      var style = {
-        version: 8,
-        sources: {
-          omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' }
-        },
-        layers: [
-          { id: 'bg', type: 'background', paint: { 'background-color': '#0a0a0b' } },
-          { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#0a0a0b' } },
-          { id: 'coast', type: 'line', source: 'omt', 'source-layer': 'water', maxzoom: 9,
-            paint: { 'line-color': '#ffffff', 'line-opacity': 0.42, 'line-width': 0.7 } },
-          { id: 'states', type: 'line', source: 'omt', 'source-layer': 'boundary',
-            filter: ['all', ['==', ['get', 'admin_level'], 4], ['!=', ['get', 'maritime'], 1]],
-            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.08, 8, 0.16], 'line-width': 0.5 } },
-          { id: 'country', type: 'line', source: 'omt', 'source-layer': 'boundary',
-            filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]],
-            paint: { 'line-color': '#ffffff', 'line-opacity': 0.55, 'line-width': 0.9 } },
-          { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', minzoom: 10, paint: { 'fill-color': '#0f1110' } },
-          { id: 'building', type: 'fill', source: 'omt', 'source-layer': 'building', minzoom: 13,
-            paint: { 'fill-color': '#161618', 'fill-outline-color': '#1f1f22' } },
-          { id: 'road-minor', type: 'line', source: 'omt', 'source-layer': 'transportation',
-            filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'track', 'path']]],
-            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0.08, 15, 0.32],
-              'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.3, 16, 1.4] } },
-          { id: 'road-mid', type: 'line', source: 'omt', 'source-layer': 'transportation',
-            filter: ['in', ['get', 'class'], ['literal', ['secondary', 'tertiary']]],
-            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.12, 14, 0.55],
-              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.3, 16, 2.2] } },
-          { id: 'road-major', type: 'line', source: 'omt', 'source-layer': 'transportation',
-            filter: ['in', ['get', 'class'], ['literal', ['motorway', 'trunk', 'primary']]],
-            paint: { 'line-color': '#ffffff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.18, 12, 0.85],
-              'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.3, 16, 3.2] } }
-        ]
-      };
+    var state = { cities: [], byId: {}, data: {}, active: null, mode: 'footprint', minScore: 3, minAcres: 0, mapReady: false };
+    var panel = document.getElementById('panel');
+    var track = document.getElementById('track');
 
-      var map = new maplibregl.Map({
-        container: 'map', style: style, bounds: CONUS, maxBounds: LIMIT, renderWorldCopies: false,
-        attributionControl: false, dragRotate: false, pitchWithRotate: false
+    function fmt(n, d) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
+    function pct(x, d) { return fmt(x * 100, d === undefined ? 1 : d) + '%'; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    function narrow() { return window.innerWidth <= 760; }
+    function pad() {
+      return narrow() ? { top: 70, bottom: Math.round(window.innerHeight * 0.46) + 120, left: 24, right: 24 }
+                      : { top: 90, bottom: 150, left: 390, right: 60 };
+    }
+
+    /* ---------------- map ---------------- */
+    var style = {
+      version: 8,
+      glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+      sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+      layers: [
+        { id: 'bg', type: 'background', paint: { 'background-color': '#111113' } },
+        { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#0b0b0c' } },
+        { id: 'coast', type: 'line', source: 'omt', 'source-layer': 'water', maxzoom: 9, paint: { 'line-color': '#fff', 'line-opacity': 0.4, 'line-width': 0.6 } },
+        { id: 'states', type: 'line', source: 'omt', 'source-layer': 'boundary',
+          filter: ['all', ['==', ['get', 'admin_level'], 4], ['!=', ['get', 'maritime'], 1]],
+          paint: { 'line-color': '#fff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.09, 8, 0.16], 'line-width': 0.5 } },
+        { id: 'country', type: 'line', source: 'omt', 'source-layer': 'boundary',
+          filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]],
+          paint: { 'line-color': '#fff', 'line-opacity': 0.5, 'line-width': 0.8 } },
+        { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', minzoom: 11, paint: { 'fill-color': '#151716' } },
+        { id: 'building', type: 'fill', source: 'omt', 'source-layer': 'building', minzoom: 13, paint: { 'fill-color': '#1c1c1f', 'fill-outline-color': '#26262a' } },
+        { id: 'road-minor', type: 'line', source: 'omt', 'source-layer': 'transportation',
+          filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'track', 'path']]],
+          paint: { 'line-color': '#fff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0.07, 16, 0.3], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.3, 16, 1.3] } },
+        { id: 'road-mid', type: 'line', source: 'omt', 'source-layer': 'transportation',
+          filter: ['in', ['get', 'class'], ['literal', ['secondary', 'tertiary']]],
+          paint: { 'line-color': '#fff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.1, 14, 0.5], 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.3, 16, 2] } },
+        { id: 'road-major', type: 'line', source: 'omt', 'source-layer': 'transportation',
+          filter: ['in', ['get', 'class'], ['literal', ['motorway', 'trunk', 'primary']]],
+          paint: { 'line-color': '#fff', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.16, 12, 0.8], 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.3, 16, 3] } }
+      ]
+    };
+
+    var map = new maplibregl.Map({
+      container: 'map', style: style, bounds: CONUS, fitBoundsOptions: { padding: 40 }, maxBounds: LIMIT,
+      renderWorldCopies: false, attributionControl: false, dragRotate: false, pitchWithRotate: false, touchPitch: false
+    });
+    map.touchZoomRotate.disableRotation();
+    map.addControl(new maplibregl.AttributionControl({ compact: true,
+      customAttribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a> · LEHD LODES' }), 'bottom-right');
+
+    // The map can start in a hidden or zero-size window; keep its canvas in step.
+    function resize() { try { map.resize(); } catch (e) {} }
+    window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { resize(); } });
+
+    var EMPTY = { type: 'FeatureCollection', features: [] };
+    map.on('load', function () {
+      map.addSource('cities', { type: 'geojson', data: EMPTY });
+      map.addSource('outline', { type: 'geojson', data: EMPTY });
+      map.addSource('lots', { type: 'geojson', data: EMPTY, promoteId: 'id' });
+      map.addSource('core', { type: 'geojson', data: EMPTY });
+
+      map.addLayer({ id: 'outline-fill', type: 'fill', source: 'outline', paint: { 'fill-color': '#fff', 'fill-opacity': 0.025 } });
+      map.addLayer({ id: 'outline-line', type: 'line', source: 'outline', paint: { 'line-color': '#fff', 'line-opacity': 0.75, 'line-width': 1, 'line-dasharray': [2, 2] } });
+      map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots', paint: { 'fill-color': '#ff8a3d', 'fill-opacity': 0.55 } });
+      map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', paint: { 'line-color': '#ffb27f', 'line-opacity': 0.85, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 17, 1.2] } });
+      map.addLayer({ id: 'lots-hi', type: 'line', source: 'lots', paint: { 'line-color': '#fff', 'line-width': 2.2,
+        'line-opacity': ['case', ['boolean', ['feature-state', 'sel'], false], 1, 0] } });
+      map.addLayer({ id: 'core', type: 'circle', source: 'core', paint: { 'circle-radius': 5, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
+      map.addLayer({ id: 'city-halo', type: 'circle', source: 'cities', maxzoom: 10,
+        paint: { 'circle-radius': ['interpolate', ['linear'], ['get', 'share'], 0, 6, 0.15, 22], 'circle-color': '#ff8a3d', 'circle-opacity': 0.18, 'circle-blur': 0.4 } });
+      map.addLayer({ id: 'city-dot', type: 'circle', source: 'cities', maxzoom: 10,
+        paint: { 'circle-radius': 3.5, 'circle-color': '#ff8a3d', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1 } });
+      map.addLayer({ id: 'city-label', type: 'symbol', source: 'cities', maxzoom: 10,
+        layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-offset': [0, 1.3], 'text-anchor': 'top', 'text-optional': true },
+        paint: { 'text-color': 'rgba(245,245,247,0.75)', 'text-halo-color': '#111113', 'text-halo-width': 1.2 } });
+
+      ['city-dot', 'city-halo'].forEach(function (id) {
+        map.on('click', id, function (e) { selectCity(e.features[0].properties.id); });
+        map.on('mouseenter', id, function () { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', id, function () { map.getCanvas().style.cursor = ''; });
       });
-      map.addControl(new maplibregl.AttributionControl({
-        compact: true,
-        customAttribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
-      }), 'bottom-right');
+      map.on('click', 'lots-fill', function (e) { openLot(e.features[0].properties.id, e.lngLat); });
+      map.on('mouseenter', 'lots-fill', function () { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'lots-fill', function () { map.getCanvas().style.cursor = ''; });
 
-      var cities = [], active = null, lotsVisible = true;
-      var panel = document.getElementById('panel');
-      var strip = document.getElementById('strip');
+      state.mapReady = true;
+      syncCities();
+      if (state.active && state.data[state.active]) { drawCity(state.data[state.active]); }
+    });
 
-      function ringArea(coords) {
-        // planar area in m² using a local equirectangular projection
-        var lat0 = coords[0][1] * Math.PI / 180, R = 6371008.8, a = 0;
-        for (var i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-          var xi = coords[i][0] * Math.PI / 180 * R * Math.cos(lat0), yi = coords[i][1] * Math.PI / 180 * R;
-          var xj = coords[j][0] * Math.PI / 180 * R * Math.cos(lat0), yj = coords[j][1] * Math.PI / 180 * R;
-          a += (xj + xi) * (yj - yi);
+    /* ---------------- data ---------------- */
+    function decodeRing(s) {
+      var v = s.split(' ').map(Number), x = v[0], y = v[1], ring = [[x / 1e5, y / 1e5]];
+      for (var i = 2; i < v.length; i += 2) { x += v[i]; y += v[i + 1]; ring.push([x / 1e5, y / 1e5]); }
+      ring.push(ring[0].slice());
+      return ring;
+    }
+
+    function loadIndex() {
+      return fetch('data/index.json').then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); }).then(function (j) {
+        state.cities = j.cities;
+        j.cities.forEach(function (c) { state.byId[c.id] = c; });
+        renderRail();
+        renderOverview();
+        syncCities();
+      }).catch(function () {
+        panel.innerHTML = '<p class="caption">The city list could not be loaded. Please reload the page.</p><button class="ghost" onclick="location.reload()">Reload</button>';
+      });
+    }
+
+    function loadCity(id) {
+      if (state.data[id]) { return Promise.resolve(state.data[id]); }
+      return fetch('data/cities/' + id + '.json').then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); }).then(function (d) {
+        d.lotById = {};
+        d.geo = { type: 'FeatureCollection', features: d.lots.map(function (l) {
+          d.lotById[l.id] = l;
+          var rings = l.outer.map(decodeRing), holes = (l.inner || []).map(decodeRing);
+          var geom = rings.length === 1 ? { type: 'Polygon', coordinates: [rings[0]].concat(holes) }
+                                         : { type: 'MultiPolygon', coordinates: rings.map(function (r, i) { return i === 0 ? [r].concat(holes) : [r]; }) };
+          return { type: 'Feature', geometry: geom, properties: { id: l.id, score: l.score, acres: l.acres } };
+        }) };
+        d.outlineGeo = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: d.outline.map(decodeRing) } };
+        state.data[id] = d;
+        return d;
+      });
+    }
+
+    function syncCities() {
+      if (!state.mapReady || !state.cities.length) { return; }
+      map.getSource('cities').setData({ type: 'FeatureCollection', features: state.cities.map(function (c) {
+        return { type: 'Feature', geometry: { type: 'Point', coordinates: c.core }, properties: { id: c.id, name: c.name, share: c.stats.share } };
+      }) });
+    }
+
+    /* ---------------- carousel ---------------- */
+    function renderRail() {
+      var maxShare = Math.max.apply(null, state.cities.map(function (c) { return c.stats.share; }));
+      track.innerHTML = state.cities.map(function (c) {
+        return '<button class="card" role="listitem" data-id="' + c.id + '"><div class="nm">' + esc(c.name) + '</div><div class="st">' + c.state + ' · ' + fmt(c.stats.downtownSqMi, 1) + ' sq mi</div>' +
+          '<div class="sh"><div class="t"><div class="f" style="width:' + (c.stats.share / maxShare * 100) + '%"></div></div>' + pct(c.stats.share) + '</div></button>';
+      }).join('');
+      Array.prototype.forEach.call(track.children, function (b) {
+        b.addEventListener('click', function () { selectCity(b.getAttribute('data-id')); });
+      });
+    }
+
+    // Hover-driven scrolling: pointer left of centre scrolls toward the start, right of centre toward the end;
+    // speed grows with distance from the centre. Touch devices use normal swiping.
+    (function () {
+      var vx = 0, raf = null, hovering = false;
+      var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (!fine) { return; }
+      function step() {
+        if (!hovering || Math.abs(vx) < 0.05) { raf = null; return; }
+        track.scrollLeft += vx;
+        raf = requestAnimationFrame(step);
+      }
+      track.addEventListener('mousemove', function (e) {
+        var r = track.getBoundingClientRect();
+        var t = ((e.clientX - r.left) / r.width) * 2 - 1;       // -1 .. 1
+        var dead = 0.18;
+        var m = Math.abs(t) < dead ? 0 : (Math.abs(t) - dead) / (1 - dead);
+        vx = Math.sign(t) * Math.pow(m, 1.6) * 14;               // px per frame
+        hovering = true;
+        if (!raf) { raf = requestAnimationFrame(step); }
+      });
+      track.addEventListener('mouseleave', function () { hovering = false; vx = 0; });
+    })();
+
+    function markCard(id) {
+      Array.prototype.forEach.call(track.children, function (b) {
+        var on = b.getAttribute('data-id') === id;
+        b.classList.toggle('on', on);
+        if (on) {
+          var r = track.getBoundingClientRect(), br = b.getBoundingClientRect();
+          if (br.left < r.left + 40 || br.right > r.right - 40) {
+            track.scrollTo({ left: track.scrollLeft + (br.left - r.left) - r.width / 2 + br.width / 2, behavior: 'smooth' });
+          }
         }
-        return Math.abs(a / 2);
+      });
+    }
+
+    /* ---------------- overview panel ---------------- */
+    function renderOverview() {
+      var cs = state.cities.slice().sort(function (a, b) { return b.stats.share - a.stats.share; });
+      var maxShare = cs[0].stats.share;
+      var totLots = 0, totAcres = 0;
+      state.cities.forEach(function (c) { totLots += c.stats.lots; totAcres += c.stats.parkingAcres; });
+      panel.innerHTML = '<div class="fadein"><p class="eyebrow">All downtowns</p><h2>24 cities</h2><p class="sub">Measurement · OSM-mapped surface lots</p>' +
+        '<div class="grid2"><div class="cellk"><div class="k">Mapped lots</div><div class="v">' + fmt(totLots) + '</div></div>' +
+        '<div class="cellk"><div class="k">Parking area</div><div class="v">' + fmt(totAcres) + '<small>acres</small></div></div></div>' +
+        '<p class="h3"><span>Share of downtown land</span><span>Measurement</span></p><ul class="ranks">' +
+        cs.map(function (c) {
+          return '<li data-id="' + c.id + '"><span>' + esc(c.name) + '</span><span class="bar" style="display:block;margin:0"><span class="track" style="display:block"><span class="fill" style="display:block;width:' + (c.stats.share / maxShare * 100) + '%"></span></span></span><span class="num">' + pct(c.stats.share) + '</span></li>';
+        }).join('') + '</ul><p class="note">Lower bound: only lots mapped in OpenStreetMap are counted. Manhattan uses the whole borough. Select a city to see its lots.</p></div>';
+      Array.prototype.forEach.call(panel.querySelectorAll('.ranks li'), function (li) {
+        li.addEventListener('click', function () { selectCity(li.getAttribute('data-id')); });
+      });
+    }
+
+    function overview() {
+      state.active = null;
+      markCard(null);
+      if (state.mapReady) {
+        ['outline', 'lots', 'core'].forEach(function (s) { map.getSource(s).setData(EMPTY); });
+        var cam = map.cameraForBounds(CONUS, { padding: narrow() ? 20 : 60 });
+        map.flyTo({ center: cam.center, zoom: cam.zoom, duration: FLY_MS, curve: 1.4, essential: true });
       }
+      if (state.cities.length) { renderOverview(); }
+      if (popup) { popup.remove(); }
+    }
 
-      function bboxArea(b) {
-        return ringArea([[b[1], b[0]], [b[3], b[0]], [b[3], b[2]], [b[1], b[2]], [b[1], b[0]]]);
+    /* ---------------- city view ---------------- */
+    function selectCity(id) {
+      if (!state.byId[id]) { return; }
+      var first = state.active !== id;
+      state.active = id;
+      markCard(id);
+      if (popup) { popup.remove(); }
+      var c = state.byId[id];
+      panel.innerHTML = '<div class="fadein"><p class="eyebrow">' + c.state + '</p><h2>' + esc(c.name) + '</h2><p class="caption">Loading lots…</p></div>';
+      if (state.mapReady && first) {
+        var cam = map.cameraForBounds(c.bounds, { padding: pad() });
+        if (cam) { map.flyTo({ center: cam.center, zoom: cam.zoom, duration: FLY_MS, curve: 1.8, essential: true }); }
       }
+      loadCity(id).then(function (d) {
+        if (state.active !== id) { return; }
+        renderCity(d);
+        if (state.mapReady) { drawCity(d); }
+      }).catch(function () {
+        panel.innerHTML = '<p class="eyebrow">' + c.state + '</p><h2>' + esc(c.name) + '</h2><p class="caption">This city\'s data could not be loaded.</p><button class="ghost" id="retry">Try again</button>';
+        document.getElementById('retry').onclick = function () { selectCity(id); };
+      });
+    }
 
-      function pad(withPanel) {
-        var narrow = window.innerWidth <= 760;
-        if (narrow) { return withPanel ? { top: 90, bottom: 330, left: 16, right: 16 } : { top: 110, bottom: 140, left: 16, right: 16 }; }
-        return withPanel ? { top: 150, bottom: 150, left: 40, right: 350 } : { top: 140, bottom: 140, left: 60, right: 60 };
+    function drawCity(d) {
+      map.getSource('outline').setData(d.outlineGeo);
+      map.getSource('lots').setData(d.geo);
+      map.getSource('core').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: d.core }, properties: {} });
+      applyMode();
+    }
+
+    function matches(l) { return l.score >= state.minScore && l.acres >= state.minAcres; }
+
+    function applyMode() {
+      if (!state.mapReady) { return; }
+      if (state.mode === 'footprint') {
+        map.setFilter('lots-fill', null); map.setFilter('lots-line', null);
+        map.setPaintProperty('lots-fill', 'fill-color', '#ff8a3d');
+        map.setPaintProperty('lots-fill', 'fill-opacity', 0.55);
+        map.setPaintProperty('lots-line', 'line-color', '#ffb27f');
+      } else {
+        // Candidates: a neutral cool ramp by score; lots below the filter fade to grey.
+        var on = ['all', ['>=', ['get', 'score'], state.minScore], ['>=', ['get', 'acres'], state.minAcres]];
+        map.setFilter('lots-fill', null); map.setFilter('lots-line', null);
+        map.setPaintProperty('lots-fill', 'fill-color', ['case', on,
+          ['interpolate', ['linear'], ['get', 'score'], 1, '#3f6f80', 2, '#5f9bb0', 3, '#86c4da', 4, '#c9ecf8'], '#3a3a3e']);
+        map.setPaintProperty('lots-fill', 'fill-opacity', ['case', on, 0.8, 0.35]);
+        map.setPaintProperty('lots-line', 'line-color', ['case', on, '#c9ecf8', '#4a4a4f']);
       }
+    }
 
-      function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d }); }
-
-      // Lots are stored as compact text, one lot per line:
-      // osm_id|name|parking|fee|access|x0 y0 dx dy dx dy ...  (integers, 1e-5 degrees, delta-encoded)
-      function decode(txt) {
-        var feats = [];
-        txt.split('\n').forEach(function (line) {
-          if (!line) { return; }
-          var c = line.split('|'), v = c[5].split(' ').map(Number), ring = [], x = 0, y = 0;
-          for (var i = 0; i < v.length; i += 2) { x += v[i]; y += v[i + 1]; ring.push([x / 1e5, y / 1e5]); }
-          ring.push(ring[0].slice());
-          feats.push({ type: 'Feature', id: Number(c[0]),
-            properties: { osm_id: c[0], name: c[1], parking: c[2] || 'unspecified', fee: c[3], access: c[4], m2: ringArea(ring) },
-            geometry: { type: 'Polygon', coordinates: [ring] } });
+    function renderCity(d) {
+      var s = d.stats;
+      var head = '<div class="fadein"><p class="eyebrow">' + d.state + ' · Downtown ' + fmt(s.downtownSqMi, 2) + ' sq mi</p><h2>' + esc(d.name) + '</h2>' +
+        '<p class="sub">' + (d.id === 'newyork' ? 'Special case: all of Manhattan' : 'Boundary: LODES ' + s.lodesYear + ' job density ≥ 25 jobs/acre') + '</p>' +
+        '<div class="seg"><button data-mode="footprint" class="' + (state.mode === 'footprint' ? 'on' : '') + '">Footprint</button><button data-mode="candidates" class="' + (state.mode === 'candidates' ? 'on' : '') + '">Candidates</button></div>';
+      var body = state.mode === 'footprint' ? footprintHtml(d) : candidatesHtml(d);
+      panel.innerHTML = head + '<div id="modebody">' + body + '</div></div>';
+      Array.prototype.forEach.call(panel.querySelectorAll('.seg button'), function (b) {
+        b.addEventListener('click', function () {
+          state.mode = b.getAttribute('data-mode');
+          if (popup) { popup.remove(); }
+          renderCity(d); applyMode();
         });
-        return { type: 'FeatureCollection', features: feats };
-      }
+      });
+      if (state.mode === 'candidates') { wireCandidates(d); }
+    }
 
-      var lotsByCity = {};
-      function loadAllLots(list) {
-        return Promise.all(list.map(function (c) {
-          return fetch('data/lots/' + c.id + '.txt')
-            .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
-            .then(function (t) { lotsByCity[c.id] = decode(t); })
-            .catch(function () { lotsByCity[c.id] = null; });
-        })).then(function () {
-          var all = [];
-          list.forEach(function (c) { if (lotsByCity[c.id]) { all = all.concat(lotsByCity[c.id].features); } });
-          map.getSource('lots').setData({ type: 'FeatureCollection', features: all });
-        });
-      }
+    function footprintHtml(d) {
+      var s = d.stats, b = s.bins;
+      var maxA = Math.max(b.lt0_5.acres, b['0_5to2'].acres, b.gt2.acres, 0.01);
+      function row(label, x) { return '<div class="bar"><span>' + label + '</span><span class="track"><span class="fill" style="display:block;width:' + (x.acres / maxA * 100) + '%"></span></span><span class="num">' + fmt(x.lots) + ' · ' + fmt(x.acres, 1) + ' ac</span></div>'; }
+      return '<div class="big">' + fmt(s.share * 100, 1) + '<small>%</small></div>' +
+        '<p class="caption">of downtown land is mapped surface parking <span class="tag">Measurement</span></p>' +
+        '<div class="grid2">' +
+        '<div class="cellk"><div class="k">Parking area</div><div class="v">' + fmt(s.parkingAcres, 1) + '<small>acres</small></div></div>' +
+        '<div class="cellk"><div class="k">In sq ft</div><div class="v">' + fmt(s.parkingSqFt / 1e6, 2) + '<small>million</small></div></div>' +
+        '<div class="cellk"><div class="k">Surface lots</div><div class="v">' + fmt(s.lots) + '</div></div>' +
+        '<div class="cellk"><div class="k">Downtown</div><div class="v">' + fmt(s.downtownAcres) + '<small>acres</small></div></div></div>' +
+        '<p class="h3"><span>Lots by size</span><span>Count · acres inside</span></p><div class="bars">' +
+        row('&lt; 0.5 acre', b.lt0_5) + row('0.5–2 acres', b['0_5to2']) + row('&gt; 2 acres', b.gt2) + '</div>' +
+        '<p class="note">Lower bound: OSM-mapped lots only. Dashed line: downtown boundary. Ring: downtown core (densest jobs). OSM data fetched ' + d.osmFetched + '.</p>';
+    }
 
-      function renderPanel(city, gj) {
-        if (!gj) {
-          panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown</p><p class="loading">Loading parking lots…</p>';
-          return;
-        }
-        var total = gj.features.reduce(function (s, f) { return s + f.properties.m2; }, 0);
-        var share = total / bboxArea(city.bbox) * 100;
-        panel.innerHTML =
-          '<h2>' + city.name + '</h2><p class="sub">' + city.state + ' · Downtown (approx.)</p>' +
-          '<div class="stat"><div class="k">Surface lots</div><div class="v">' + gj.features.length + '<small>mapped</small></div></div>' +
-          '<div class="stat"><div class="k">Total area</div><div class="v">' + fmt(total / M2_PER_ACRE, 1) + '<small>acres</small></div></div>' +
-          '<div class="stat"><div class="k">Share of downtown box</div><div class="v">' + fmt(share, 1) + '<small>%</small></div></div>' +
-          '<p class="note">Lots mapped in OpenStreetMap. OSM is incomplete, so this is a lower bound and not model output.</p>';
-      }
+    function candidatesHtml(d) {
+      var maxAc = Math.max.apply(null, d.lots.map(function (l) { return l.acres; }).concat([1]));
+      return '<p class="h3"><span>Screening filters</span><span class="tag">Screening result</span></p>' +
+        '<div class="ctl"><label>Minimum score <b id="ms">' + state.minScore + ' of 4</b></label><div class="chips">' +
+        [1, 2, 3, 4].map(function (k) { return '<button data-s="' + k + '" class="' + (state.minScore === k ? 'on' : '') + '">' + k + '+</button>'; }).join('') + '</div></div>' +
+        '<div class="ctl"><label>Minimum lot size <b id="ma">' + fmt(state.minAcres, 1) + ' acres</b></label><input type="range" id="acres" min="0" max="' + Math.ceil(maxAc) + '" step="0.1" value="' + Math.min(state.minAcres, Math.ceil(maxAc)) + '"></div>' +
+        '<div class="legend"><span><i style="background:#c9ecf8"></i>4</span><span><i style="background:#86c4da"></i>3</span><span><i style="background:#5f9bb0"></i>2</span><span><i style="background:#3f6f80"></i>1</span><span><i style="background:#3a3a3e"></i>Outside filter</span></div>' +
+        '<div class="big" id="cn" style="font-size:44px">0</div><p class="caption">lots match these filters</p>' +
+        '<ul class="list" id="clist"></ul>' +
+        '<button class="ghost" id="csv">Download matching lots (CSV)</button>' +
+        '<p class="note">Score = criteria passed out of four: size ≥ 1.5 acres, ≤ 0.5 mile from the core, transit stop ≤ 0.25 mile, building coverage above the downtown median. Zoning is not verified. A candidate is not a recommendation.</p>';
+    }
 
-      function showError(city) {
-        panel.innerHTML = '<h2>' + city.name + '</h2><p class="sub">' + city.state + '</p><p class="loading">Could not load parking data. Try again in a moment.</p>';
-      }
-
-      function selectCity(city) {
-        active = city;
-        Array.prototype.forEach.call(strip.children, function (b) { b.classList.toggle('active', b.dataset.id === city.id); });
-        panel.classList.add('show');
-        var b = city.bbox;
-        map.fitBounds([[b[1], b[0]], [b[3], b[2]]], { padding: pad(true), duration: 1600, essential: true });
-        if (lotsByCity[city.id]) { renderPanel(city, lotsByCity[city.id]); }
-        else if (lotsByCity[city.id] === null) { showError(city); }
-        else { renderPanel(city, null); }
-      }
-
-      function overview() {
-        active = null;
-        panel.classList.remove('show');
-        Array.prototype.forEach.call(strip.children, function (b) { b.classList.remove('active'); });
-        map.flyTo({ bounds: CONUS, maxBounds: LIMIT, renderWorldCopies: false, duration: 1400, essential: true });
-      }
-
-      map.on('load', function () {
-        map.fitBounds(CONUS, { padding: pad(false), duration: 0 });
-        map.addSource('lots', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots', minzoom: 10.5,
-          paint: { 'fill-color': '#ff8a3d', 'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.85, 0.55] } });
-        map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', minzoom: 10.5, paint: { 'line-color': '#ffb27d', 'line-width': 0.8 } });
-
-        fetch('data/cities.json').then(function (r) { return r.json(); }).then(function (list) {
-          cities = list;
-          map.addSource('cities', { type: 'geojson', data: { type: 'FeatureCollection', features: list.map(function (c) {
-            return { type: 'Feature', properties: { id: c.id }, geometry: { type: 'Point', coordinates: c.center } }; }) } });
-          map.addLayer({ id: 'city-glow', type: 'circle', source: 'cities', maxzoom: 11,
-            paint: { 'circle-radius': 16, 'circle-color': '#ff8a3d', 'circle-opacity': 0.18, 'circle-blur': 0.6 } });
-          map.addLayer({ id: 'city-dot', type: 'circle', source: 'cities', maxzoom: 11,
-            paint: { 'circle-radius': 5.5, 'circle-color': '#ff8a3d', 'circle-stroke-color': '#0a0a0b', 'circle-stroke-width': 1.5 } });
-
-          loadAllLots(list).then(function () { if (active) { selectCity(active); } });
-          list.forEach(function (c) {
-            var b = document.createElement('button');
-            b.className = 'city'; b.dataset.id = c.id;
-            b.innerHTML = '<div class="dots"><i></i><i></i></div><div class="name">' + c.name + '</div><div class="state">' + c.state + '</div>';
-            b.addEventListener('click', function () { selectCity(c); });
-            strip.appendChild(b);
+    function wireCandidates(d) {
+      function refresh() {
+        var hits = d.lots.filter(matches);
+        document.getElementById('cn').textContent = fmt(hits.length);
+        document.getElementById('ms').textContent = state.minScore + ' of 4';
+        document.getElementById('ma').textContent = fmt(state.minAcres, 1) + ' acres';
+        var list = document.getElementById('clist');
+        list.innerHTML = hits.slice(0, 8).map(function (l) {
+          return '<li data-id="' + l.id + '"><div><div class="n">' + esc(l.name || 'Unnamed lot') + '</div><div class="d">' + fmt(l.acres, 2) + ' acres · ' + fmt(l.coreMi, 2) + ' mi to core</div></div><span class="s">' + l.score + '/4</span></li>';
+        }).join('') + (hits.length > 8 ? '<li style="cursor:default"><div class="d">+ ' + fmt(hits.length - 8) + ' more on the map</div><span></span></li>' : '');
+        Array.prototype.forEach.call(list.querySelectorAll('li[data-id]'), function (li) {
+          li.addEventListener('click', function () {
+            var l = d.lotById[li.getAttribute('data-id')];
+            map.flyTo({ center: l.center, zoom: Math.max(map.getZoom(), 16), duration: 1200, essential: true });
+            openLot(l.id, { lng: l.center[0], lat: l.center[1] });
           });
         });
-
-        map.on('click', 'city-dot', function (e) {
-          var id = e.features[0].properties.id;
-          var c = cities.filter(function (x) { return x.id === id; })[0];
-          if (c) { selectCity(c); }
-        });
-        ['city-dot', 'lots-fill'].forEach(function (l) {
-          map.on('mouseenter', l, function () { map.getCanvas().style.cursor = 'pointer'; });
-          map.on('mouseleave', l, function () { map.getCanvas().style.cursor = ''; });
-        });
-
-        var hovered = null;
-        map.on('mousemove', 'lots-fill', function (e) {
-          if (hovered !== null) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); }
-          hovered = e.features[0].id;
-          map.setFeatureState({ source: 'lots', id: hovered }, { hover: true });
-        });
-        map.on('mouseleave', 'lots-fill', function () {
-          if (hovered !== null) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); }
-          hovered = null;
-        });
-
-        map.on('click', 'lots-fill', function (e) {
-          var p = e.features[0].properties, m2 = Number(p.m2);
-          var html = '<b>' + (p.name || 'Surface lot') + '</b><br>' +
-            'About ' + fmt(m2 * SQFT_PER_M2, 0) + ' sq ft (' + fmt(m2 / M2_PER_ACRE, 2) + ' acres)<br>' +
-            'Type: ' + p.parking + (p.fee ? ' · Fee: ' + p.fee : '') + (p.access ? ' · Access: ' + p.access : '') + '<br>' +
-            '<span style="color:rgba(245,245,247,0.45)">OSM way ' + p.osm_id + '</span>';
-          new maplibregl.Popup({ closeButton: true, maxWidth: '260px' }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+        applyMode();
+      }
+      Array.prototype.forEach.call(panel.querySelectorAll('.chips button'), function (b) {
+        b.addEventListener('click', function () {
+          state.minScore = Number(b.getAttribute('data-s'));
+          Array.prototype.forEach.call(panel.querySelectorAll('.chips button'), function (x) { x.classList.toggle('on', x === b); });
+          refresh();
         });
       });
+      document.getElementById('acres').addEventListener('input', function (e) { state.minAcres = Number(e.target.value); refresh(); });
+      document.getElementById('csv').addEventListener('click', function () { downloadCsv(d); });
+      refresh();
+    }
 
-      document.getElementById('btn-overview').addEventListener('click', overview);
-      document.getElementById('btn-lots').addEventListener('click', function () {
-        lotsVisible = !lotsVisible;
-        this.classList.toggle('on', lotsVisible);
-        ['lots-fill', 'lots-line'].forEach(function (l) { map.setLayoutProperty(l, 'visibility', lotsVisible ? 'visible' : 'none'); });
+    function downloadCsv(d) {
+      var cols = ['city', 'osm_id', 'name', 'lon', 'lat', 'acres', 'sq_ft', 'acres_inside_downtown', 'score_of_4', 'size_ge_1_5_acres', 'within_0_5_mi_of_core',
+        'transit_within_0_25_mi', 'building_coverage_above_median', 'zoning_high_density', 'miles_to_core', 'miles_to_transit_stop', 'miles_to_rail', 'building_coverage', 'parking_tag', 'fee', 'access'];
+      function q(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+      var rows = d.lots.filter(matches).map(function (l) {
+        var k = l.checks;
+        return [d.name, l.id, l.name, l.center[0], l.center[1], l.acres, Math.round(l.acres * SQFT_PER_ACRE), l.acresInside, l.score,
+          k.size, k.core, k.transit, k.density, 'not verified', l.coreMi, l.transitMi, l.railMi, l.bldgCoverage, l.parking || '', l.fee || '', l.access || ''].map(q).join(',');
       });
-      var about = document.getElementById('about');
-      document.getElementById('btn-about').addEventListener('click', function () { about.classList.add('show'); });
-      document.getElementById('btn-close').addEventListener('click', function () { about.classList.remove('show'); });
-      about.addEventListener('click', function (e) { if (e.target === about) { about.classList.remove('show'); } });
-    })();
+      var text = '# Downtown Parking Footprint - screening results, not recommendations. Data (c) OpenStreetMap contributors, ODbL; LEHD LODES.\n' + cols.join(',') + '\n' + rows.join('\n') + '\n';
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+      a.download = 'parking-candidates-' + d.id + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    /* ---------------- popups ---------------- */
+    var popup = null, selected = null;
+    function openLot(id, lngLat) {
+      var d = state.data[state.active]; if (!d) { return; }
+      var l = d.lotById[id]; if (!l) { return; }
+      if (selected) { map.setFeatureState({ source: 'lots', id: selected }, { sel: false }); }
+      selected = id; map.setFeatureState({ source: 'lots', id: id }, { sel: true });
+      function yn(v) { return v ? '<span class="ok">Pass</span>' : '<span class="no">No</span>'; }
+      var link = 'https://www.openstreetmap.org/' + (id[0] === 'r' ? 'relation/' : 'way/') + id.slice(1);
+      var html = '<div class="pp"><h5>' + esc(l.name || 'Unnamed surface lot') + '</h5><div class="d">' + esc([l.fee === 'yes' ? 'Paid' : (l.fee === 'no' ? 'Free' : null), l.access, l.capacity ? l.capacity + ' spaces' : null].filter(Boolean).join(' · ') || 'Surface parking') + '</div>' +
+        '<div class="lab">Measurement</div>' +
+        '<div class="row"><span>Area</span><span>' + fmt(l.acres, 2) + ' acres · ' + fmt(l.acres * SQFT_PER_ACRE) + ' sq ft</span></div>' +
+        (Math.abs(l.acresInside - l.acres) > 0.005 ? '<div class="row"><span>Inside downtown</span><span>' + fmt(l.acresInside, 2) + ' acres</span></div>' : '') +
+        '<div class="row"><span>To downtown core</span><span>' + fmt(l.coreMi, 2) + ' mi</span></div>' +
+        '<div class="row"><span>To nearest stop · rail</span><span>' + (l.transitMi == null ? '—' : fmt(l.transitMi, 2)) + ' · ' + (l.railMi == null ? '—' : fmt(l.railMi, 2)) + ' mi</span></div>' +
+        '<div class="lab">Screening · score ' + l.score + ' of 4</div>' +
+        '<div class="row"><span>Size ≥ 1.5 acres</span>' + yn(l.checks.size) + '</div>' +
+        '<div class="row"><span>≤ 0.5 mi from core</span>' + yn(l.checks.core) + '</div>' +
+        '<div class="row"><span>Transit ≤ 0.25 mi</span>' + yn(l.checks.transit) + '</div>' +
+        '<div class="row"><span>Dense surroundings</span>' + yn(l.checks.density) + '</div>' +
+        '<div class="row"><span>Zoning allows density</span><span class="nv">Not verified</span></div>' +
+        '<div class="row"><span>OSM</span><a href="' + link + '" target="_blank" rel="noopener" style="color:var(--ink-2)">' + id + '</a></div></div>';
+      if (popup) { popup.remove(); }
+      popup = new maplibregl.Popup({ offset: 10, maxWidth: '300px' }).setLngLat(lngLat).setHTML(html).addTo(map);
+      popup.on('close', function () { if (selected) { map.setFeatureState({ source: 'lots', id: selected }, { sel: false }); selected = null; } });
+    }
+
+    /* ---------------- sheets & landing ---------------- */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sheet]'), function (b) {
+      b.addEventListener('click', function () { document.getElementById('sheet-' + b.getAttribute('data-sheet')).classList.add('show'); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.sheet'), function (s) {
+      s.addEventListener('click', function (e) { if (e.target === s || e.target.hasAttribute('data-close')) { s.classList.remove('show'); } });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { Array.prototype.forEach.call(document.querySelectorAll('.sheet.show'), function (s) { s.classList.remove('show'); }); }
+    });
+    document.getElementById('home').addEventListener('click', overview);
+
+    var hero = document.getElementById('hero');
+    requestAnimationFrame(function () { setTimeout(function () { hero.classList.add('in'); }, 60); });
+    // If animation frames are paused (background tab), still show the landing.
+    setTimeout(function () { hero.classList.add('in'); }, 400);
+    document.getElementById('enter').addEventListener('click', function () {
+      hero.classList.add('out');
+      document.body.classList.add('entered');
+      resize();
+    });
+
+    loadIndex();
+  })();
   </script>
 </body>
 </html>
