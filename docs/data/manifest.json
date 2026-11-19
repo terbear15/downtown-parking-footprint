@@ -1,0 +1,232 @@
+{
+ "built": "2026-11-19",
+ "thresholds": {
+  "minAcres": 1.5,
+  "coreMaxMi": 0.5,
+  "transitMaxMi": 0.25,
+  "densityRadiusMi": 0.25,
+  "densityRule": "building coverage above the downtown median"
+ },
+ "files": {
+  "cities/baltimore.json": {
+   "sha256": "f7e3afbee5d88dc004cecdc91e660e3cb26ca1f440bea193aa64b38f78149b34",
+   "bytes": 62231,
+   "lots": 188,
+   "parkingAcres": 77.4,
+   "share": 0.059,
+   "downtownCells": 85,
+   "osmFetched": "2026-11-18"
+  },
+  "cities/boston.json": {
+   "sha256": "62806896ed5000a13c25e54c9911a446152f3f6434bb7ab00d4a211ced53e3eb",
+   "bytes": 194404,
+   "lots": 577,
+   "parkingAcres": 230.8,
+   "share": 0.0452,
+   "downtownCells": 331,
+   "osmFetched": "2026-11-18"
+  },
+  "cities/charlotte.json": {
+   "sha256": "d8146b7ce0d5784611d365f97f0599ab9293905ceba58524e602caa1a090b1e2",
+   "bytes": 113271,
+   "lots": 321,
+   "parkingAcres": 139.2,
+   "share": 0.106,
+   "downtownCells": 85,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/chicago.json": {
+   "sha256": "27990cc89be24d0f8ec5724df34b0d8f35e9ab09549fe00500526bf91f410b3f",
+   "bytes": 195130,
+   "lots": 595,
+   "parkingAcres": 233.5,
+   "share": 0.0571,
+   "downtownCells": 265,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/cleveland.json": {
+   "sha256": "65e46514adc7b6ba026cadcd27b0a17bf5d39ef160c9230b6663788b07a9785b",
+   "bytes": 56241,
+   "lots": 167,
+   "parkingAcres": 130.7,
+   "share": 0.116,
+   "downtownCells": 73,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/dallas.json": {
+   "sha256": "8d9748688bd91da064ca1a0c42304414b29dedc281c6f4096d00e47d378717b9",
+   "bytes": 81488,
+   "lots": 253,
+   "parkingAcres": 159.4,
+   "share": 0.0776,
+   "downtownCells": 133,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/denver.json": {
+   "sha256": "44310e780c51f3acf879460c8d181c646935390d67528bdd60d1ef4fe5221183",
+   "bytes": 141269,
+   "lots": 445,
+   "parkingAcres": 178.8,
+   "share": 0.1082,
+   "downtownCells": 107,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/detroit.json": {
+   "sha256": "f15df68ac2e94e670380f4bfc439af2919efc044e34a063ef112abfc606b6419",
+   "bytes": 69245,
+   "lots": 196,
+   "parkingAcres": 65.6,
+   "share": 0.1149,
+   "downtownCells": 37,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/houston.json": {
+   "sha256": "49f3e8ad959a879202d7c350d101d08219e56fcc6f142ab87ac9ed400bdf76de",
+   "bytes": 72509,
+   "lots": 222,
+   "parkingAcres": 115.5,
+   "share": 0.0901,
+   "downtownCells": 83,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/kansascity.json": {
+   "sha256": "82963590dc6fa812ed20e7abb094080ba3dc80452dd0a9a22ff4c6bc8fe8c4b2",
+   "bytes": 129712,
+   "lots": 346,
+   "parkingAcres": 125.8,
+   "share": 0.1336,
+   "downtownCells": 61,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/losangeles.json": {
+   "sha256": "679173430b7fd771300047a7f29843f363f7a6bf491a694c6007e9a2169d7aec",
+   "bytes": 125407,
+   "lots": 384,
+   "parkingAcres": 177.0,
+   "share": 0.0721,
+   "downtownCells": 159,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/memphis.json": {
+   "sha256": "e7141f422c4e7cb55bfbe896ab31728aece2e612dded27d96b31b2c32e71a44a",
+   "bytes": 38094,
+   "lots": 119,
+   "parkingAcres": 48.7,
+   "share": 0.0876,
+   "downtownCells": 36,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/miami.json": {
+   "sha256": "c4955e099c8089ac37230ad500c9af08c574510130035d15155bad121a70f3cd",
+   "bytes": 23842,
+   "lots": 72,
+   "parkingAcres": 56.5,
+   "share": 0.0495,
+   "downtownCells": 74,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/neworleans.json": {
+   "sha256": "334d57de336427ee8be9f364c74606ca710a233f48c26415cd0057535184c7ab",
+   "bytes": 53457,
+   "lots": 164,
+   "parkingAcres": 96.0,
+   "share": 0.0928,
+   "downtownCells": 67,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/newyork.json": {
+   "sha256": "1f9580d98a707864e40ee488bfc7e30db1f7df41360eb8ad6c820e3b993ae5cf",
+   "bytes": 149817,
+   "lots": 437,
+   "parkingAcres": 150.8,
+   "share": 0.0092,
+   "downtownCells": 1058,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/orlando.json": {
+   "sha256": "d4ed1f81e07e270690e7f837c19b03f327d7bda879e88659306b1934107e131b",
+   "bytes": 19573,
+   "lots": 58,
+   "parkingAcres": 32.3,
+   "share": 0.0486,
+   "downtownCells": 43,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/philadelphia.json": {
+   "sha256": "0a499d473d9adb1307a4fb9e578f547344176d8e363e547ba9fa953f3df33a36",
+   "bytes": 102342,
+   "lots": 321,
+   "parkingAcres": 111.1,
+   "share": 0.051,
+   "downtownCells": 141,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/phoenix.json": {
+   "sha256": "f24e531e186e7262dfec7c25c61e839719a74f930f989913c9299f417ade2389",
+   "bytes": 37511,
+   "lots": 108,
+   "parkingAcres": 51.8,
+   "share": 0.0959,
+   "downtownCells": 35,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/pittsburgh.json": {
+   "sha256": "4a7d8598f9697de7b10788f602f063054b7949ba43d23abf9a325cba9168ac4c",
+   "bytes": 40912,
+   "lots": 110,
+   "parkingAcres": 60.9,
+   "share": 0.073,
+   "downtownCells": 54,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/portland.json": {
+   "sha256": "228089e2dcb7828d49de37c356914fa0ecdc13d0a31b0b6125549d1486982090",
+   "bytes": 108032,
+   "lots": 318,
+   "parkingAcres": 77.3,
+   "share": 0.0533,
+   "downtownCells": 94,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/sacramento.json": {
+   "sha256": "70dfde97614bfc5b8fdb8264d00fbdb4b837b53015f3a5998089112649c13544",
+   "bytes": 194406,
+   "lots": 637,
+   "parkingAcres": 128.1,
+   "share": 0.0855,
+   "downtownCells": 97,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/sanfrancisco.json": {
+   "sha256": "df5bd956f0c326f381885427537a95cbed660e90f7590ff89d344e3f61a05b66",
+   "bytes": 121088,
+   "lots": 370,
+   "parkingAcres": 132.2,
+   "share": 0.0333,
+   "downtownCells": 257,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/seattle.json": {
+   "sha256": "fda62d7236c122806e91b34a8a5b610001d0d531281cd46ed08f95e175db2812",
+   "bytes": 150411,
+   "lots": 463,
+   "parkingAcres": 99.2,
+   "share": 0.0371,
+   "downtownCells": 173,
+   "osmFetched": "2026-11-19"
+  },
+  "cities/stlouis.json": {
+   "sha256": "1d770b5a8c64f32f699145939ef872504b47610d51b2212573cef2c5198b3397",
+   "bytes": 147736,
+   "lots": 373,
+   "parkingAcres": 204.5,
+   "share": 0.179,
+   "downtownCells": 74,
+   "osmFetched": "2026-11-19"
+  },
+  "index.json": {
+   "sha256": "339e658b61353322135a764b4aef5074847d93af20a4e98c376aedb606c4d061",
+   "bytes": 6628
+  }
+ }
+}

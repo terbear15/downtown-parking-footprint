@@ -301,6 +301,9 @@ def main():
             print("missing OSM data:", cid)
             continue
         city = build_city(cid, bounds[cid], cores[cid], json.loads(f.read_text()))
+        for l in city["lots"]:
+            for k in [k for k, v in l.items() if v is None or v == []]:
+                del l[k]
         text = json.dumps(city, separators=(",", ":"))
         p = OUT / "cities" / f"{cid}.json"
         p.write_text(text, encoding="utf-8")
