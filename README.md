@@ -4,18 +4,24 @@ How much downtown land do U.S. cities give to surface parking, and which lots sc
 
 Live site: https://terbear15.github.io/downtown-parking-footprint/
 
-- **Q1 · Footprint (measurement):** surface parking area and share of downtown land in 24 downtowns.
+- **Q1 · Footprint (measurement):** surface parking area and share of downtown land in 50 downtowns.
 - **Q2 · Candidates (screening):** each lot is scored on four open-data criteria (size ≥ 1.5 acres, ≤ 0.5 mile from the downtown core, transit stop ≤ 0.25 mile, building coverage above the downtown median). Zoning is not verified yet. Scores are screening results, not recommendations.
 
 ## Downtown boundary
 One rule for every city: LODES 8 workplace jobs (2023; Detroit 2021) aggregated to 250 m cells, 3×3 mean ≥ 25 jobs/acre, the connected cluster containing the densest cell within 3 km of city hall, holes filled. Manhattan is a special case (whole borough).
 
+## AI: finding lots missing from OSM
+A U-Net (MobileNet encoder) trained on NAIP aerial imagery with OSM lots as labels; spatial hold-out pixel IoU 0.32 vs 0.08 for a colour rule, 70% of lots over 1 acre found. It proposed 983 unmapped lots in 13 under-mapped downtowns; 467 are queued for human review at https://terbear15.github.io/downtown-parking-footprint/review/ . Details: `model/README.md`.
+
 ## Layout
 ```
 raw/                     downloads made in the browser (LODES boundaries, OSM extracts)
+python/fetch_data.py     re-downloads LODES + OSM for every city (one command)
 python/build_data.py     computes Q1 metrics and Q2 scores -> docs/data/
 java/src/SiteBuilder.java  stamps build/data dates into java/template/index.html -> docs/index.html
 docs/                    GitHub Pages site (MapLibre GL JS + OpenFreeMap tiles)
+model/                   trained U-Net (TensorFlow.js), metrics, all detections
+docs/review/             review page for model detections
 docs/data/manifest.json  counts, totals and SHA-256 of every data file
 ```
 

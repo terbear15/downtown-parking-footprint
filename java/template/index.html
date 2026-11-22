@@ -356,7 +356,7 @@
     <ul>
       <li><b>Vector GIS:</b> polygon clipping, areas in a local projection, buffers and nearest-distance queries.</li>
       <li><b>Spatial aggregation:</b> block-level jobs gridded and smoothed to define every downtown with one rule.</li>
-      <li><b>Deep learning (next phase):</b> a U-Net segmentation model on NAIP aerial imagery, trained on these OSM lots, to find lots missing from OSM, with predictions checked by a human reviewer.</li>
+      <li><b>Deep learning (U-Net):</b> a segmentation model with a pretrained MobileNet encoder, trained in the browser with TensorFlow.js on 897 NAIP aerial tiles (1.4 m pixels) from 16 cities, using the OSM lots as labels. Tested on four held-out cities (Denver, Kansas City, Philadelphia, Seattle): pixel IoU 0.32 against 0.08 for a simple asphalt-colour rule; it finds 54% of mapped lots over 0.25 acre and 70% of lots over 1 acre. Its proposals for lots missing from OSM are being checked by a human reviewer before any are added.</li>
       <li><b>Web mapping:</b> MapLibre GL vector tiles; data built by Python; page assembled by a Java build step.</li>
     </ul>
     <h4>Reproducibility</h4>
@@ -367,7 +367,8 @@
     <button class="btn close" data-close>Close</button>
     <p class="eyebrow">Limitations</p><h3>What these numbers cannot tell you</h3>
     <ul>
-      <li><b>Lower bound.</b> Only lots mapped in OpenStreetMap are counted, and coverage differs by city (table below). The next phase uses a model on aerial imagery to find unmapped lots.</li>
+      <li><b>Lower bound.</b> Only lots mapped in OpenStreetMap are counted, and coverage differs by city (table below). A U-Net model on aerial imagery proposes unmapped lots; none are counted until a person has confirmed them.</li>
+      <li><b>Model limits.</b> The model learns from OSM, so its labels contain the same gaps; its held-out pixel IoU is 0.32 and it misses about half of small lots. Its output is a list of proposals, not a measurement.</li>
       <li><b>Denominator.</b> Downtown area includes streets, parks and some water at the edges, so the share is of all downtown land, not of buildable parcels.</li>
       <li><b>Boundary rule.</b> A different job-density threshold or cell size gives different boundaries. Manhattan is a special case.</li>
       <li><b>Transit.</b> Bus stops are dense downtown, so "any stop" passes for most lots; "rail only" is stricter.</li>

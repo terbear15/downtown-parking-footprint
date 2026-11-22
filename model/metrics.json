@@ -1,0 +1,183 @@
+{
+ "name": "U-Net, MobileNet v1 0.25 encoder (ImageNet), TensorFlow.js",
+ "input": "224x224 RGB NAIP, zoom-17 web tiles",
+ "train": {
+  "cities": [
+   "baltimore",
+   "charlotte",
+   "chicago",
+   "cleveland",
+   "detroit",
+   "houston",
+   "losangeles",
+   "memphis",
+   "minneapolis",
+   "neworleans",
+   "phoenix",
+   "portland",
+   "sacramento",
+   "saltlakecity",
+   "stlouis",
+   "washington"
+  ],
+  "tiles": 897
+ },
+ "heldOut": {
+  "cities": [
+   "denver",
+   "philadelphia",
+   "seattle",
+   "kansascity"
+  ],
+  "tiles": 160
+ },
+ "epochs": 17,
+ "bestEpoch": 16,
+ "test": {
+  "pixel": {
+   "thr": 0.4,
+   "iou": 0.32,
+   "precision": 0.48,
+   "recall": 0.49
+  },
+  "byCity": {
+   "denver": {
+    "iou": 0.142,
+    "precision": 0.444,
+    "recall": 0.172
+   },
+   "philadelphia": {
+    "iou": 0.269,
+    "precision": 0.334,
+    "recall": 0.578
+   },
+   "seattle": {
+    "iou": 0.128,
+    "precision": 0.189,
+    "recall": 0.286
+   },
+   "kansascity": {
+    "iou": 0.507,
+    "precision": 0.639,
+    "recall": 0.71
+   }
+  },
+  "objects": {
+   "thr": 0.4,
+   "lots": 181,
+   "detected": 98,
+   "recall": 0.541,
+   "lots1ac": 27,
+   "recall1ac": 0.704
+  },
+  "colourBaseline": {
+   "iou": 0.078,
+   "precision": 0.087,
+   "recall": 0.436
+  }
+ },
+ "history": [
+  {
+   "ep": 0,
+   "phase": "frozen",
+   "loss": 1.3238,
+   "iou": 0.149
+  },
+  {
+   "ep": 1,
+   "phase": "frozen",
+   "loss": 1.078,
+   "iou": 0.057
+  },
+  {
+   "ep": 2,
+   "phase": "frozen",
+   "loss": 0.9968,
+   "iou": 0.116
+  },
+  {
+   "ep": 3,
+   "phase": "frozen",
+   "loss": 0.9538,
+   "iou": 0.243
+  },
+  {
+   "ep": 4,
+   "phase": "frozen",
+   "loss": 0.928,
+   "iou": 0.216
+  },
+  {
+   "ep": 5,
+   "phase": "frozen",
+   "loss": 0.9042,
+   "iou": 0.275
+  },
+  {
+   "ep": 6,
+   "phase": "frozen",
+   "loss": 0.9021,
+   "iou": 0.26
+  },
+  {
+   "ep": 7,
+   "phase": "fine",
+   "loss": 0.876,
+   "iou": 0.215
+  },
+  {
+   "ep": 8,
+   "phase": "fine",
+   "loss": 0.8433,
+   "iou": 0.291
+  },
+  {
+   "ep": 9,
+   "phase": "fine",
+   "loss": 0.8404,
+   "iou": 0.254
+  },
+  {
+   "ep": 10,
+   "phase": "fine",
+   "loss": 0.8229,
+   "iou": 0.276
+  },
+  {
+   "ep": 11,
+   "phase": "fine",
+   "loss": 0.8192,
+   "iou": 0.259
+  },
+  {
+   "ep": 12,
+   "phase": "fine",
+   "loss": 0.8062,
+   "iou": 0.308
+  },
+  {
+   "ep": 13,
+   "phase": "fine",
+   "loss": 0.7936,
+   "iou": 0.302
+  },
+  {
+   "ep": 14,
+   "phase": "fine",
+   "loss": 0.7819,
+   "iou": 0.302
+  },
+  {
+   "ep": 15,
+   "phase": "fine",
+   "loss": 0.7811,
+   "iou": 0.308
+  },
+  {
+   "ep": 16,
+   "phase": "fine",
+   "loss": 0.7779,
+   "iou": 0.32
+  }
+ ]
+}

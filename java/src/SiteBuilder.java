@@ -24,6 +24,10 @@ public class SiteBuilder {
         if (m.find()) {
             dataDate = m.group(1);
         }
+        Matcher from = Pattern.compile("\"osmFetchedFrom\":\"(\\d{4}-\\d{2}-\\d{2})\"").matcher(Files.readString(index, StandardCharsets.UTF_8));
+        if (from.find() && !from.group(1).equals(dataDate)) {
+            dataDate = from.group(1) + " to " + dataDate;
+        }
         String html = Files.readString(template, StandardCharsets.UTF_8)
             .replace("{{BUILD_DATE}}", LocalDate.now().toString())
             .replace("{{DATA_DATE}}", dataDate);

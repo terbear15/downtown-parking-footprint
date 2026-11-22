@@ -91,7 +91,6 @@
       var src = { type: 'geojson', data: EMPTY }; if (s === 'lots') { src.promoteId = 'id'; } map.addSource(s, src);
     });
     map.addLayer({ id: 'outline-fill', type: 'fill', source: 'outline', paint: { 'fill-color': '#f5f5f7', 'fill-opacity': 0.012 } });
-    map.addLayer({ id: 'outline-line', type: 'line', source: 'outline', paint: { 'line-color': '#f5f5f7', 'line-opacity': 0, 'line-width': 1, 'line-opacity-transition': { duration: 250 } } });
     map.addLayer({ id: 'heat', type: 'heatmap', source: 'heat', maxzoom: 14,
       paint: { 'heatmap-weight': ['interpolate', ['linear'], ['get', 'acres'], 0, 0, 3, 1], 'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 0.6, 13, 1.4],
         'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 9, 6, 13, 26],
@@ -130,8 +129,6 @@
     map.on('mouseleave', 'lots-fill', function () { map.getCanvas().style.cursor = ''; if (hovered) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); hovered = null; } tip(); });
     map.on('mousemove', 'core', function (e) { var d = S.data[S.active]; tip(e.point, '<b>Downtown core</b><br>' + (d && d.coreJobsPerAcre ? 'Densest jobs: about ' + fmt(d.coreJobsPerAcre) + ' jobs per acre' : 'Set at Grand Central (Manhattan special case)')); });
     map.on('mouseleave', 'core', function () { tip(); });
-    map.on('mousemove', 'outline-fill', function () { map.setPaintProperty('outline-line', 'line-opacity', 0.55); });
-    map.on('mouseleave', 'outline-fill', function () { map.setPaintProperty('outline-line', 'line-opacity', 0); });
     map.on('mousemove', 'structures', function (e) { var p = e.features[0].properties; tip(e.point, '<b>' + esc(p.name || 'Parking structure') + '</b><br>' + (p.kind === 'rooftop' ? 'Rooftop' : 'Multi-storey') + ' · not counted as surface'); });
     map.on('mouseleave', 'structures', function () { tip(); });
 
@@ -518,7 +515,7 @@
       '<div class="cellk"><div class="k">Area in sq ft</div><div class="v">' + fmt(s.parkingSqFt / 1e6, 2) + '<small>million</small></div></div></div></div>' +
       '<p class="h3">Lots by size <span class="r">tap to show on the map</span></p><div class="bins">' + bin('lt0_5', '&lt; 0.5 acre') + bin('0_5to2', '0.5–2 acres') + bin('gt2', '&gt; 2 acres') + '</div>' +
       (s.structures ? '<p class="note" style="margin:-6px 0 12px">' + fmt(s.structures) + ' parking structures (' + fmt(s.structuredAcres, 1) + ' acres of footprint) are shown in grey and not counted.</p>' : '') +
-      '<p class="note">Lower bound: OSM-mapped lots only. Zoomed out, the glow shows where parking concentrates. Hover the map to see the downtown boundary; the ring marks the downtown core. Data fetched ' + d.osmFetched + '.</p>';
+      '<p class="note">Lower bound: OSM-mapped lots only. Zoomed out, the glow shows where parking concentrates. The faintly lighter area is downtown; the ring marks the downtown core. Data fetched ' + d.osmFetched + '.</p>';
     countUp($('bn'), s.share * 100, 1); countUp($('ba'), s.parkingAcres, 1); countUp($('bf'), s.parkingAcres / FIELD_ACRES, 0); countUp($('bl'), s.lots, 0);
     requestAnimationFrame(function () { requestAnimationFrame(function () { each('.bin .fil', function (f) { f.style.width = f.getAttribute('data-w') + '%'; }, pbody); }); });
     each('.bin', function (el) {

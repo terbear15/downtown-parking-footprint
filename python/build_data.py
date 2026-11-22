@@ -381,7 +381,8 @@ def main():
     csv = "\n".join(rows) + "\n"
     (OUT / "summary.csv").write_text(csv, encoding="utf-8")
     manifest["files"]["summary.csv"] = {"sha256": hashlib.sha256(csv.encode()).hexdigest(), "bytes": len(csv)}
-    text = json.dumps({"built": manifest["built"], "medianShare": round(med_share, 4), "osmFetched": max(v["osmFetched"] for k, v in manifest["files"].items() if k.startswith("cities/")), "cities": index}, separators=(",", ":"))
+    fetched = [v["osmFetched"] for k, v in manifest["files"].items() if k.startswith("cities/")]
+    text = json.dumps({"built": manifest["built"], "medianShare": round(med_share, 4), "osmFetched": max(fetched), "osmFetchedFrom": min(fetched), "cities": index}, separators=(",", ":"))
     (OUT / "index.json").write_text(text, encoding="utf-8")
     manifest["files"]["index.json"] = {"sha256": hashlib.sha256(text.encode()).hexdigest(), "bytes": len(text)}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
