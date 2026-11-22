@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Review model detections · Downtown Parking Footprint</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root { --g0:#0f0f11; --ink:#f5f5f7; --ink-2:rgba(245,245,247,.66); --ink-3:rgba(245,245,247,.42); --line:rgba(255,255,255,.12); --lot:#e9a577; --yes:#7fd1a1; --no:#ef8f8f;
+      --font:"Helvetica Neue", Helvetica, Arial, sans-serif; --spring:cubic-bezier(.32,1.25,.5,1); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: radial-gradient(120% 90% at 50% 0%, #1c1c1f 0%, var(--g0) 70%); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    .wrap { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; max-width: 980px; margin: 0 auto; padding: 18px 20px 24px; gap: 16px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+    h1 span { font-weight: 300; color: var(--ink-2); }
+    .bar { height: 4px; border-radius: 2px; background: rgba(120,120,128,.25); overflow: hidden; flex: 1; min-width: 160px; }
+    .bar i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .3s; }
+    .counts { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; align-items: start; }
+    .stage { position: relative; aspect-ratio: 1; border-radius: 22px; overflow: hidden; background: #1c1c1f; border: .5px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+    canvas { width: 100%; height: 100%; display: block; image-rendering: auto; }
+    .stamp { position: absolute; top: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; opacity: 0; transform: scale(.9); transition: opacity .2s, transform .3s var(--spring); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+    .stamp.show { opacity: 1; transform: none; }
+    .side { background: rgba(30,30,34,.58); border: .5px solid var(--line); border-radius: 22px; padding: 18px; -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); }
+    .eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 6px; }
+    .city { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px; }
+    .meta { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin: 0 0 16px; }
+    .q { font-size: 15px; margin: 0 0 12px; }
+    .btns { display: grid; gap: 8px; }
+    .b { border: 0; border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; transition: transform .2s var(--spring), filter .2s; }
+    .b:active { transform: scale(.97); } .b:hover { filter: brightness(1.08); }
+    .b kbd { font: 12px ui-monospace, Menlo, monospace; opacity: .6; border: 1px solid currentColor; border-radius: 6px; padding: 1px 6px; }
+    .yes { background: rgba(127,209,161,.2); color: var(--yes); } .no { background: rgba(239,143,143,.18); color: var(--no); } .uns { background: rgba(255,255,255,.08); color: var(--ink); }
+    .row { display: flex; gap: 8px; margin-top: 12px; }
+    .ghost { flex: 1; border: .5px solid var(--line); background: transparent; border-radius: 12px; padding: 9px; font-size: 13px; color: var(--ink-2); }
+    .ghost:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+    .help { font-size: 12px; color: var(--ink-3); line-height: 1.6; margin: 16px 0 0; }
+    footer { font-size: 11.5px; color: var(--ink-3); text-align: center; }
+    .done { text-align: center; padding: 60px 20px; }
+    .done h2 { font-size: 30px; font-weight: 300; margin: 0 0 10px; }
+    .done p { color: var(--ink-2); }
+    .primary { border: 0; border-radius: 999px; padding: 13px 26px; background: var(--ink); color: var(--g0); font-weight: 600; font-size: 15px; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } .stage { border-radius: 18px; } .side { padding: 14px; } .city { font-size: 20px; } .btns { grid-template-columns: 1fr 1fr 1fr; } .b { flex-direction: column; gap: 4px; padding: 12px 6px; font-size: 14px; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Review detections <span>· Downtown Parking Footprint</span></h1>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="counts" id="counts">Loading…</div>
+  </header>
+  <main id="main">
+    <div class="stage"><canvas id="cv" width="768" height="768"></canvas><div class="stamp" id="stamp"></div></div>
+    <aside class="side">
+      <p class="eyebrow" id="idx">Detection</p>
+      <p class="city" id="city">—</p>
+      <p class="meta" id="meta"></p>
+      <p class="q">Is the outlined area a <b>surface parking lot</b>?</p>
+      <div class="btns">
+        <button class="b yes" data-a="yes">Yes <kbd>Y</kbd></button>
+        <button class="b no" data-a="no">No <kbd>N</kbd></button>
+        <button class="b uns" data-a="unsure">Not sure <kbd>U</kbd></button>
+      </div>
+      <div class="row"><button class="ghost" id="back">Back (B)</button><button class="ghost" id="toggle">Hide outline (H)</button></div>
+      <div class="row"><button class="ghost" id="dl">Download results</button></div>
+      <p class="help">Answer "Yes" if most of the outlined area is open-air parking (painted stalls, cars, asphalt next to a building). "No" for roofs, roads, rail yards, plazas, water or shadows. Your answers are saved in this browser; download them when you finish.</p>
+    </aside>
+  </main>
+  <footer>Imagery: USDA NAIP via Microsoft Planetary Computer · Model predictions are unverified until reviewed.</footer>
+</div>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'dpf-review-v1', set = null, i = 0, answers = {}, showOutline = true, tileTpl = null;
+  var cv = document.getElementById('cv'), g = cv.getContext('2d');
+  try { answers = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { answers = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch (e) {} }
+  function $(id) { return document.getElementById(id); }
+
+  function decodeRLE(rle, n) {          // runs alternate 0,1,0,1... over n*n cells
+    var m = new Uint8Array(n * n), p = 0, v = 0;
+    rle.forEach(function (r) { if (v) { m.fill(1, p, p + r); } p += r; v = 1 - v; });
+    return m;
+  }
+
+  function register() {
+    return fetch('https://planetarycomputer.microsoft.com/api/data/v1/mosaic/register', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(set.mosaicQuery) }).then(function (r) { return r.json(); }).then(function (j) {
+      tileTpl = 'https://planetarycomputer.microsoft.com/api/data/v1/mosaic/' + j.searchid + '/tiles/WebMercatorQuad/{z}/{x}/{y}?collection=naip&assets=image&asset_bidx=image%7C1,2,3';
+    });
+  }
+  function loadImg(z, x, y) {
+    return new Promise(function (res) {
+      var im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = function () { res(im); }; im.onerror = function () { res(null); };
+      im.src = tileTpl.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+    });
+  }
+  // Draw the detection's tile plus its eight neighbours for context, zoomed on the centre tile.
+  var cache = {};
+  function draw() {
+    var d = set.detections[i]; if (!d) { return; }
+    var S = cv.width / 2;                 // centre tile drawn at half the canvas, neighbours around it
+    g.fillStyle = '#1c1c1f'; g.fillRect(0, 0, cv.width, cv.height);
+    var jobs = [];
+    for (var dx = -1; dx <= 1; dx++) { for (var dy = -1; dy <= 1; dy++) { jobs.push([dx, dy]); } }
+    var token = i;
+    Promise.all(jobs.map(function (o) {
+      var k = d.z + '/' + (d.x + o[0]) + '/' + (d.y + o[1]);
+      if (!cache[k]) { cache[k] = loadImg(d.z, d.x + o[0], d.y + o[1]); }
+      return cache[k].then(function (im) { return [o, im]; });
+    })).then(function (list) {
+      if (token !== i) { return; }
+      list.forEach(function (p) { if (p[1]) { g.drawImage(p[1], S / 2 + p[0][0] * S, S / 2 + p[0][1] * S, S, S); } });
+      if (showOutline) {
+        var n = set.grid, m = decodeRLE(d.mask, n), c = S / n, ox = S / 2, oy = S / 2;
+        g.fillStyle = 'rgba(233,165,119,0.28)';
+        for (var r = 0; r < n; r++) { for (var q = 0; q < n; q++) { if (m[r * n + q]) { g.fillRect(ox + q * c, oy + r * c, c + 0.5, c + 0.5); } } }
+        g.strokeStyle = '#f3c4a2'; g.lineWidth = 2.5; g.beginPath();
+        for (r = 0; r < n; r++) { for (q = 0; q < n; q++) {
+          if (!m[r * n + q]) { continue; }
+          if (r === 0 || !m[(r - 1) * n + q]) { g.moveTo(ox + q * c, oy + r * c); g.lineTo(ox + (q + 1) * c, oy + r * c); }
+          if (r === n - 1 || !m[(r + 1) * n + q]) { g.moveTo(ox + q * c, oy + (r + 1) * c); g.lineTo(ox + (q + 1) * c, oy + (r + 1) * c); }
+          if (q === 0 || !m[r * n + q - 1]) { g.moveTo(ox + q * c, oy + r * c); g.lineTo(ox + q * c, oy + (r + 1) * c); }
+          if (q === n - 1 || !m[r * n + q + 1]) { g.moveTo(ox + (q + 1) * c, oy + r * c); g.lineTo(ox + (q + 1) * c, oy + (r + 1) * c); }
+        } }
+        g.stroke();
+      }
+      g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 1; g.strokeRect(S / 2, S / 2, S, S);
+    });
+    // prefetch next
+    var nx = set.detections[i + 1];
+    if (nx) { for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) { var k2 = nx.z + '/' + (nx.x + a) + '/' + (nx.y + b); if (!cache[k2]) { cache[k2] = loadImg(nx.z, nx.x + a, nx.y + b); } } } }
+  }
+  function render() {
+    var n = set.detections.length, done = Object.keys(answers).length;
+    $('bar').style.width = (done / n * 100) + '%';
+    var y = 0, no = 0, u = 0; Object.keys(answers).forEach(function (k) { var v = answers[k]; if (v === 'yes') { y++; } else if (v === 'no') { no++; } else { u++; } });
+    $('counts').textContent = done + ' / ' + n + ' reviewed · ' + y + ' yes · ' + no + ' no · ' + u + ' unsure';
+    if (i >= n) { finish(); return; }
+    var d = set.detections[i];
+    $('idx').textContent = 'Detection ' + (i + 1) + ' of ' + n + (answers[d.id] ? ' · answered: ' + answers[d.id] : '');
+    $('city').textContent = d.cityName;
+    $('meta').innerHTML = 'About ' + d.acres.toFixed(2) + ' acres · model confidence ' + Math.round(d.prob * 100) + '%<br>Not in OpenStreetMap · <a style="color:inherit" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + d.lat + '&mlon=' + d.lon + '#map=19/' + d.lat + '/' + d.lon + '">open location</a>';
+    draw();
+  }
+  function stamp(a) { var s = $('stamp'); s.textContent = a === 'yes' ? 'Yes' : a === 'no' ? 'No' : 'Not sure'; s.style.background = a === 'yes' ? 'rgba(127,209,161,.35)' : a === 'no' ? 'rgba(239,143,143,.35)' : 'rgba(255,255,255,.2)'; s.classList.add('show'); setTimeout(function () { s.classList.remove('show'); }, 380); }
+  function answer(a) { var d = set.detections[i]; if (!d) { return; } answers[d.id] = a; save(); stamp(a); i++; while (i < set.detections.length && answers[set.detections[i].id]) { i++; } setTimeout(render, 120); }
+  function finish() {
+    $('main').innerHTML = '<div class="done" style="grid-column:1/-1"><h2>All detections reviewed</h2><p>Thank you. Download the results and put the file in your downtown-parking-footprint folder.</p><button class="primary" id="dl2">Download results</button></div>';
+    $('dl2').onclick = download;
+  }
+  function download() {
+    var out = { kind: 'dpf_review_results', reviewSet: set.version, model: set.model, saved: new Date().toISOString(), answers: answers };
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' }));
+    a.download = 'dpf_review_results.json'; document.body.appendChild(a); a.click(); a.remove();
+  }
+  document.querySelectorAll('[data-a]').forEach(function (b) { b.addEventListener('click', function () { answer(b.getAttribute('data-a')); }); });
+  $('back').onclick = function () { if (i > 0) { i--; render(); } };
+  $('toggle').onclick = function () { showOutline = !showOutline; $('toggle').textContent = showOutline ? 'Hide outline (H)' : 'Show outline (H)'; draw(); };
+  $('dl').onclick = download;
+  document.addEventListener('keydown', function (e) {
+    var k = e.key.toLowerCase();
+    if (k === 'y' || k === 'arrowright') { answer('yes'); } else if (k === 'n' || k === 'arrowleft') { answer('no'); } else if (k === 'u') { answer('unsure'); }
+    else if (k === 'b' || k === 'backspace') { if (i > 0) { i--; render(); } } else if (k === 'h') { $('toggle').click(); }
+  });
+
+  fetch('review.json').then(function (r) { return r.json(); }).then(function (j) {
+    set = j; if (set.version !== (JSON.parse(localStorage.getItem(KEY + '-ver') || '""'))) { localStorage.setItem(KEY + '-ver', JSON.stringify(set.version)); }
+    while (i < set.detections.length && answers[set.detections[i].id]) { i++; }
+    return register();
+  }).then(render).catch(function () { $('counts').textContent = 'Could not load the review set.'; });
+})();
+</script>
+</body>
+</html>
