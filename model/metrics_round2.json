@@ -1,0 +1,128 @@
+{
+ "name": "U-Net, MobileNet v1 0.25 encoder, round 2 (retrained on 421 human answers)",
+ "bestEpoch": 1,
+ "heldOutCities": {
+  "iou": 0.319,
+  "precision": 0.629,
+  "recall": 0.393
+ },
+ "heldBackReviewed": {
+  "yesKept": 0.75,
+  "noKept": 0.222,
+  "yesN": 32,
+  "noN": 54,
+  "precisionProxy": 0.667
+ },
+ "round1": {
+  "val": {
+   "iou": 0.32,
+   "precision": 0.48,
+   "recall": 0.49
+  },
+  "fb": {
+   "yesKept": 1,
+   "noKept": 1,
+   "yesN": 32,
+   "noN": 54,
+   "precisionProxy": 0.372
+  }
+ },
+ "history": [
+  {
+   "ep": 0,
+   "loss": 0.8457,
+   "iou": 0.329,
+   "precision": 0.506,
+   "yesKept": 0.969,
+   "noKept": 0.648
+  },
+  {
+   "ep": 1,
+   "loss": 0.814,
+   "iou": 0.319,
+   "precision": 0.629,
+   "yesKept": 0.75,
+   "noKept": 0.222
+  },
+  {
+   "ep": 2,
+   "loss": 0.8086,
+   "iou": 0.332,
+   "precision": 0.552,
+   "yesKept": 0.875,
+   "noKept": 0.519
+  },
+  {
+   "ep": 3,
+   "loss": 0.7946,
+   "iou": 0.331,
+   "precision": 0.496,
+   "yesKept": 0.969,
+   "noKept": 0.667
+  },
+  {
+   "ep": 4,
+   "loss": 0.7807,
+   "iou": 0.328,
+   "precision": 0.499,
+   "yesKept": 0.938,
+   "noKept": 0.593
+  },
+  {
+   "ep": 5,
+   "loss": 0.7716,
+   "iou": 0.311,
+   "precision": 0.583,
+   "yesKept": 0.781,
+   "noKept": 0.37
+  },
+  {
+   "ep": 6,
+   "loss": 0.7615,
+   "iou": 0.327,
+   "precision": 0.514,
+   "yesKept": 0.906,
+   "noKept": 0.426
+  },
+  {
+   "ep": 7,
+   "loss": 0.7551,
+   "iou": 0.309,
+   "precision": 0.611,
+   "yesKept": 0.594,
+   "noKept": 0.222
+  },
+  {
+   "ep": 8,
+   "loss": 0.7546,
+   "iou": 0.333,
+   "precision": 0.525,
+   "yesKept": 0.719,
+   "noKept": 0.389
+  },
+  {
+   "ep": 9,
+   "loss": 0.7507,
+   "iou": 0.334,
+   "precision": 0.49,
+   "yesKept": 0.875,
+   "noKept": 0.519
+  },
+  {
+   "ep": 10,
+   "loss": 0.7337,
+   "iou": 0.328,
+   "precision": 0.547,
+   "yesKept": 0.781,
+   "noKept": 0.444
+  },
+  {
+   "ep": 11,
+   "loss": 0.7419,
+   "iou": 0.325,
+   "precision": 0.49,
+   "yesKept": 0.875,
+   "noKept": 0.593
+  }
+ ]
+}

@@ -87,7 +87,7 @@
   var EMPTY = { type: 'FeatureCollection', features: [] };
   var LOT_OP = ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.46];
   map.on('load', function () {
-    ['cities', 'outline', 'lots', 'structures', 'core', 'heat'].forEach(function (s) {
+    ['cities', 'outline', 'lots', 'structures', 'core', 'heat', 'ai'].forEach(function (s) {
       var src = { type: 'geojson', data: EMPTY }; if (s === 'lots') { src.promoteId = 'id'; } map.addSource(s, src);
     });
     map.addLayer({ id: 'outline-fill', type: 'fill', source: 'outline', paint: { 'fill-color': '#f5f5f7', 'fill-opacity': 0.012 } });
@@ -97,6 +97,8 @@
         'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(233,165,119,0)', 0.25, 'rgba(233,165,119,0.18)', 0.6, 'rgba(233,165,119,0.5)', 1, 'rgba(243,196,162,0.85)'],
         'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 12, 1, 13.6, 0] } });
     map.addLayer({ id: 'structures', type: 'fill', source: 'structures', minzoom: 12, paint: { 'fill-color': '#f5f5f7', 'fill-opacity': 0.1, 'fill-outline-color': 'rgba(245,245,247,0.25)' } });
+    map.addLayer({ id: 'ai-fill', type: 'fill', source: 'ai', minzoom: 12, paint: { 'fill-color': '#e9a577', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.22] } });
+    map.addLayer({ id: 'ai-line', type: 'line', source: 'ai', minzoom: 12, paint: { 'line-color': '#f3c4a2', 'line-width': 1.4, 'line-dasharray': [2, 1.5], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.9] } });
     map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots', minzoom: 12, paint: { 'fill-color': '#e9a577', 'fill-opacity': LOT_OP, 'fill-opacity-transition': { duration: 350 } } });
     map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', minzoom: 12, paint: { 'line-color': '#f3c4a2', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.6], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 17, 1.1] } });
     map.addLayer({ id: 'lots-glow', type: 'line', source: 'lots', paint: { 'line-color': '#ffffff', 'line-width': 9, 'line-blur': 7, 'line-opacity': ['case', ['boolean', ['feature-state', 'sel'], false], 0.55, 0] } });
@@ -129,6 +131,8 @@
     map.on('mouseleave', 'lots-fill', function () { map.getCanvas().style.cursor = ''; if (hovered) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); hovered = null; } tip(); });
     map.on('mousemove', 'core', function (e) { var d = S.data[S.active]; tip(e.point, '<b>Downtown core</b><br>' + (d && d.coreJobsPerAcre ? 'Densest jobs: about ' + fmt(d.coreJobsPerAcre) + ' jobs per acre' : 'Set at Grand Central (Manhattan special case)')); });
     map.on('mouseleave', 'core', function () { tip(); });
+    map.on('mousemove', 'ai-fill', function (e) { var p = e.features[0].properties; tip(e.point, '<b>Found by the AI model</b><br>' + fmt(p.acres, 2) + ' acres · confirmed by a reviewer · not in OpenStreetMap'); });
+    map.on('mouseleave', 'ai-fill', function () { tip(); });
     map.on('mousemove', 'structures', function (e) { var p = e.features[0].properties; tip(e.point, '<b>' + esc(p.name || 'Parking structure') + '</b><br>' + (p.kind === 'rooftop' ? 'Rooftop' : 'Multi-storey') + ' · not counted as surface'); });
     map.on('mouseleave', 'structures', function () { tip(); });
 
@@ -191,6 +195,7 @@
       d.lots.forEach(function (l) { if (l.acresInside == null) { l.acresInside = l.acres; } d.lotById[l.id] = l; });
       d.geo = { type: 'FeatureCollection', features: d.lots.map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { id: l.id, acres: l.acres } }; }) };
       d.heat = { type: 'FeatureCollection', features: d.lots.map(function (l) { return { type: 'Feature', geometry: { type: 'Point', coordinates: l.center }, properties: { acres: l.acres } }; }) };
+      d.aiGeo = { type: 'FeatureCollection', features: (d.aiLots || []).map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { acres: l.acres } }; }) };
       d.structGeo = { type: 'FeatureCollection', features: (d.structures || []).map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { name: l.name || '', kind: l.kind } }; }) };
       d.outlineGeo = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: d.outline.map(decodeRing) } };
       S.data[id] = d; return d;
@@ -406,7 +411,7 @@
   }
   function overview() {
     S.active = null; markCard(null); closeLot(); writeHash();
-    if (S.mapReady) { ['outline', 'lots', 'core', 'heat', 'structures'].forEach(function (s) { map.getSource(s).setData(EMPTY); }); overviewCamera(FLY_MS); }
+    if (S.mapReady) { ['outline', 'lots', 'core', 'heat', 'structures', 'ai'].forEach(function (s) { map.getSource(s).setData(EMPTY); }); overviewCamera(FLY_MS); }
     if (S.cities.length) { renderOverview(); }
     setDrawer('half');
   }
@@ -443,6 +448,7 @@
     map.getSource('lots').setData(d.geo);
     map.getSource('heat').setData(d.heat);
     map.getSource('structures').setData(d.structGeo);
+    map.getSource('ai').setData(d.aiGeo);
     map.getSource('core').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: d.core }, properties: {} });
     if (jump) { var cam = map.cameraForBounds(d.bounds, { padding: padFor('city') }); if (cam) { map.jumpTo({ center: cam.center, zoom: Math.min(cam.zoom, 15.5) }); } }
     applyMode();
@@ -467,7 +473,9 @@
       map.setPaintProperty('lots-line', 'line-color', f ? ['case', f, '#f3c4a2', '#4a4a4f'] : '#f3c4a2');
       map.setLayoutProperty('heat', 'visibility', 'visible');
       map.setLayoutProperty('structures', 'visibility', 'visible');
+      map.setLayoutProperty('ai-fill', 'visibility', 'visible'); map.setLayoutProperty('ai-line', 'visibility', 'visible');
     } else {
+      map.setLayoutProperty('ai-fill', 'visibility', 'none'); map.setLayoutProperty('ai-line', 'visibility', 'none');
       var ids = d.lots.filter(function (l) { return evalLot(l, d).pass; }).map(function (l) { return l.id; });
       var on = ['in', ['get', 'id'], ['literal', ids]];
       map.setPaintProperty('lots-fill', 'fill-color', ['case', on, '#a9d4e6', '#3a3a3f']);
@@ -514,6 +522,8 @@
       '<div class="cellk"><div class="k">Surface lots</div><div class="v"><span id="bl">0</span></div></div>' +
       '<div class="cellk"><div class="k">Area in sq ft</div><div class="v">' + fmt(s.parkingSqFt / 1e6, 2) + '<small>million</small></div></div></div></div>' +
       '<p class="h3">Lots by size <span class="r">tap to show on the map</span></p><div class="bins">' + bin('lt0_5', '&lt; 0.5 acre') + bin('0_5to2', '0.5–2 acres') + bin('gt2', '&gt; 2 acres') + '</div>' +
+      (s.aiLots ? '<div class="group" style="padding:12px 14px"><div class="h3" style="margin:0 0 4px">Found by the AI model <span class="tag term" data-tip="A U-Net trained on NAIP aerial imagery proposed these lots; a person confirmed each one. They are not in OpenStreetMap and are not included in the main figure.">AI + human review</span></div>' +
+        '<div style="font-size:13px;color:var(--ink-2);line-height:1.5">' + fmt(s.aiLots) + ' more lots, <b style="color:var(--ink)">' + fmt(s.aiAcres, 1) + ' acres</b>. Including them, surface parking covers <b style="color:var(--ink)">' + pct(s.shareWithAi) + '</b> of downtown. Dashed outlines on the map.</div></div>' : '') +
       (s.structures ? '<p class="note" style="margin:-6px 0 12px">' + fmt(s.structures) + ' parking structures (' + fmt(s.structuredAcres, 1) + ' acres of footprint) are shown in grey and not counted.</p>' : '') +
       '<p class="note">Lower bound: OSM-mapped lots only. Zoomed out, the glow shows where parking concentrates. The faintly lighter area is downtown; the ring marks the downtown core. Data fetched ' + d.osmFetched + '.</p>';
     countUp($('bn'), s.share * 100, 1); countUp($('ba'), s.parkingAcres, 1); countUp($('bf'), s.parkingAcres / FIELD_ACRES, 0); countUp($('bl'), s.lots, 0);

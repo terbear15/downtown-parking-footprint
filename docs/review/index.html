@@ -48,7 +48,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Review detections <span>· Downtown Parking Footprint</span></h1>
+    <h1>Review detections <span id="rnd">· Downtown Parking Footprint</span></h1>
     <div class="bar"><i id="bar"></i></div>
     <div class="counts" id="counts">Loading…</div>
   </header>
@@ -74,9 +74,8 @@
 <script>
 (function () {
   'use strict';
-  var KEY = 'dpf-review-v1', set = null, i = 0, answers = {}, showOutline = true, tileTpl = null;
+  var KEY = 'dpf-review', set = null, i = 0, answers = {}, showOutline = true, tileTpl = null;
   var cv = document.getElementById('cv'), g = cv.getContext('2d');
-  try { answers = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { answers = {}; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch (e) {} }
   function $(id) { return document.getElementById(id); }
 
@@ -99,41 +98,42 @@
       im.src = tileTpl.replace('{z}', z).replace('{x}', x).replace('{y}', y);
     });
   }
-  // Draw the detection's tile plus its eight neighbours for context, zoomed on the centre tile.
   var cache = {};
+  function tileImg(z, x, y) { var k = z + '/' + x + '/' + y; if (!cache[k]) { cache[k] = loadImg(z, x, y); } return cache[k]; }
+  function lon2x(lon, z) { return (lon + 180) / 360 * Math.pow(2, z); }
+  function lat2y(lat, z) { var r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z); }
+  // The view is centred on the detection and sized to fit it with room for context.
+  function view(d) {
+    if (d.poly) {
+      var z = 17, xs = d.poly.map(function (p) { return lon2x(p[0], z); }), ys = d.poly.map(function (p) { return lat2y(p[1], z); });
+      var cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, cy = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+      var ext = Math.max(Math.max.apply(null, xs) - Math.min.apply(null, xs), Math.max.apply(null, ys) - Math.min.apply(null, ys));
+      return { z: z, cx: cx, cy: cy, span: Math.min(3, Math.max(0.9, ext * 2.4)) };
+    }
+    return { z: d.z, cx: d.x + 0.5, cy: d.y + 0.5, span: 2 };
+  }
   function draw() {
     var d = set.detections[i]; if (!d) { return; }
-    var S = cv.width / 2;                 // centre tile drawn at half the canvas, neighbours around it
-    g.fillStyle = '#1c1c1f'; g.fillRect(0, 0, cv.width, cv.height);
+    var v = view(d), W = cv.width, sc = W / v.span, x0 = v.cx - v.span / 2, y0 = v.cy - v.span / 2, token = i;
+    g.fillStyle = '#1c1c1f'; g.fillRect(0, 0, W, W);
     var jobs = [];
-    for (var dx = -1; dx <= 1; dx++) { for (var dy = -1; dy <= 1; dy++) { jobs.push([dx, dy]); } }
-    var token = i;
-    Promise.all(jobs.map(function (o) {
-      var k = d.z + '/' + (d.x + o[0]) + '/' + (d.y + o[1]);
-      if (!cache[k]) { cache[k] = loadImg(d.z, d.x + o[0], d.y + o[1]); }
-      return cache[k].then(function (im) { return [o, im]; });
-    })).then(function (list) {
+    for (var tx = Math.floor(x0); tx <= Math.floor(x0 + v.span); tx++) { for (var ty = Math.floor(y0); ty <= Math.floor(y0 + v.span); ty++) { jobs.push([tx, ty]); } }
+    Promise.all(jobs.map(function (t) { return tileImg(v.z, t[0], t[1]).then(function (im) { return [t, im]; }); })).then(function (list) {
       if (token !== i) { return; }
-      list.forEach(function (p) { if (p[1]) { g.drawImage(p[1], S / 2 + p[0][0] * S, S / 2 + p[0][1] * S, S, S); } });
-      if (showOutline) {
-        var n = set.grid, m = decodeRLE(d.mask, n), c = S / n, ox = S / 2, oy = S / 2;
-        g.fillStyle = 'rgba(233,165,119,0.28)';
+      list.forEach(function (p) { if (p[1]) { g.drawImage(p[1], (p[0][0] - x0) * sc, (p[0][1] - y0) * sc, sc + 0.5, sc + 0.5); } });
+      if (!showOutline) { return; }
+      if (d.poly) {
+        g.beginPath();
+        d.poly.forEach(function (p, k) { var px = (lon2x(p[0], v.z) - x0) * sc, py = (lat2y(p[1], v.z) - y0) * sc; if (k) { g.lineTo(px, py); } else { g.moveTo(px, py); } });
+        g.closePath(); g.fillStyle = 'rgba(233,165,119,0.22)'; g.fill(); g.strokeStyle = '#f3c4a2'; g.lineWidth = 3; g.lineJoin = 'round'; g.stroke();
+      } else {
+        var n = set.grid, m = decodeRLE(d.mask, n), c = sc / n, ox = (d.x - x0) * sc, oy = (d.y - y0) * sc;
+        g.fillStyle = 'rgba(233,165,119,0.3)';
         for (var r = 0; r < n; r++) { for (var q = 0; q < n; q++) { if (m[r * n + q]) { g.fillRect(ox + q * c, oy + r * c, c + 0.5, c + 0.5); } } }
-        g.strokeStyle = '#f3c4a2'; g.lineWidth = 2.5; g.beginPath();
-        for (r = 0; r < n; r++) { for (q = 0; q < n; q++) {
-          if (!m[r * n + q]) { continue; }
-          if (r === 0 || !m[(r - 1) * n + q]) { g.moveTo(ox + q * c, oy + r * c); g.lineTo(ox + (q + 1) * c, oy + r * c); }
-          if (r === n - 1 || !m[(r + 1) * n + q]) { g.moveTo(ox + q * c, oy + (r + 1) * c); g.lineTo(ox + (q + 1) * c, oy + (r + 1) * c); }
-          if (q === 0 || !m[r * n + q - 1]) { g.moveTo(ox + q * c, oy + r * c); g.lineTo(ox + q * c, oy + (r + 1) * c); }
-          if (q === n - 1 || !m[r * n + q + 1]) { g.moveTo(ox + (q + 1) * c, oy + r * c); g.lineTo(ox + (q + 1) * c, oy + (r + 1) * c); }
-        } }
-        g.stroke();
       }
-      g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 1; g.strokeRect(S / 2, S / 2, S, S);
     });
-    // prefetch next
     var nx = set.detections[i + 1];
-    if (nx) { for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) { var k2 = nx.z + '/' + (nx.x + a) + '/' + (nx.y + b); if (!cache[k2]) { cache[k2] = loadImg(nx.z, nx.x + a, nx.y + b); } } } }
+    if (nx) { var w = view(nx); for (var a = Math.floor(w.cx - w.span / 2); a <= Math.floor(w.cx + w.span / 2); a++) { for (var b = Math.floor(w.cy - w.span / 2); b <= Math.floor(w.cy + w.span / 2); b++) { tileImg(w.z, a, b); } } }
   }
   function render() {
     var n = set.detections.length, done = Object.keys(answers).length;
@@ -144,7 +144,7 @@
     var d = set.detections[i];
     $('idx').textContent = 'Detection ' + (i + 1) + ' of ' + n + (answers[d.id] ? ' · answered: ' + answers[d.id] : '');
     $('city').textContent = d.cityName;
-    $('meta').innerHTML = 'About ' + d.acres.toFixed(2) + ' acres · model confidence ' + Math.round(d.prob * 100) + '%<br>Not in OpenStreetMap · <a style="color:inherit" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + d.lat + '&mlon=' + d.lon + '#map=19/' + d.lat + '/' + d.lon + '">open location</a>';
+    $('meta').innerHTML = 'About ' + d.acres.toFixed(2) + ' acres · model confidence ' + Math.round(d.prob * 100) + '%' + (d.shape ? ' · ' + d.shape : '') + '<br>Not in OpenStreetMap · <a style="color:inherit" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + d.lat + '&mlon=' + d.lon + '#map=19/' + d.lat + '/' + d.lon + '">open location</a>';
     draw();
   }
   function stamp(a) { var s = $('stamp'); s.textContent = a === 'yes' ? 'Yes' : a === 'no' ? 'No' : 'Not sure'; s.style.background = a === 'yes' ? 'rgba(127,209,161,.35)' : a === 'no' ? 'rgba(239,143,143,.35)' : 'rgba(255,255,255,.2)'; s.classList.add('show'); setTimeout(function () { s.classList.remove('show'); }, 380); }
@@ -154,9 +154,9 @@
     $('dl2').onclick = download;
   }
   function download() {
-    var out = { kind: 'dpf_review_results', reviewSet: set.version, model: set.model, saved: new Date().toISOString(), answers: answers };
+    var out = { kind: 'dpf_review_results', reviewSet: set.version, round: set.round || 1, model: set.model, saved: new Date().toISOString(), answers: answers };
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' }));
-    a.download = 'dpf_review_results.json'; document.body.appendChild(a); a.click(); a.remove();
+    a.download = 'dpf_review_results_' + (set.round ? 'round' + set.round : 'round1') + '.json'; document.body.appendChild(a); a.click(); a.remove();
   }
   document.querySelectorAll('[data-a]').forEach(function (b) { b.addEventListener('click', function () { answer(b.getAttribute('data-a')); }); });
   $('back').onclick = function () { if (i > 0) { i--; render(); } };
@@ -168,8 +168,10 @@
     else if (k === 'b' || k === 'backspace') { if (i > 0) { i--; render(); } } else if (k === 'h') { $('toggle').click(); }
   });
 
-  fetch('review.json').then(function (r) { return r.json(); }).then(function (j) {
-    set = j; if (set.version !== (JSON.parse(localStorage.getItem(KEY + '-ver') || '""'))) { localStorage.setItem(KEY + '-ver', JSON.stringify(set.version)); }
+  fetch(new URLSearchParams(location.search).get('set') === 'r1' ? 'review.json' : 'review_r2.json').then(function (r) { return r.json(); }).then(function (j) {
+    set = j; KEY = 'dpf-review-' + set.version;
+    try { answers = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { answers = {}; }
+    $('rnd').textContent = '· Round ' + (set.round || 1) + ' · Downtown Parking Footprint';
     while (i < set.detections.length && answers[set.detections[i].id]) { i++; }
     return register();
   }).then(render).catch(function () { $('counts').textContent = 'Could not load the review set.'; });
