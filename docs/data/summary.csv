@@ -1,0 +1,30 @@
+city,state,region,downtown_sq_mi,downtown_acres,jobs_lodes,lodes_year,surface_lots,surface_parking_acres,share_of_downtown,lots_per_sq_mi,possible_osm_undermapping,score4_candidates,score3_candidates,structured_parking_acres
+"Atlanta",GA,South,3.93,2517.4,233642,2023,359,147.9,0.0588,91.3,true,8,58,110.6
+"Baltimore",MD,South,2.05,1312.7,124469,2023,188,77.4,0.059,91.7,false,0,47,31.2
+"Boston",MA,Northeast,7.99,5112.0,628497,2023,577,230.8,0.0452,72.2,true,0,38,55.9
+"Charlotte",NC,South,2.05,1312.7,139540,2023,321,139.2,0.106,156.6,false,5,38,52.6
+"Chicago",IL,Midwest,6.39,4092.7,844135,2023,595,233.5,0.0571,93.1,false,1,34,68.5
+"Cleveland",OH,Midwest,1.76,1127.4,93402,2023,167,130.7,0.116,94.9,false,3,55,47.7
+"Dallas",TX,South,3.21,2054.1,189776,2023,253,159.4,0.0776,78.8,true,4,54,61.0
+"Denver",CO,West,2.58,1652.5,161017,2023,445,178.8,0.1082,172.5,false,3,80,25.5
+"Detroit",MI,Midwest,0.89,571.4,66876,2021,196,65.6,0.1149,220.2,false,1,59,43.4
+"Houston",TX,South,2.0,1281.9,182835,2023,222,115.5,0.0901,111.0,false,3,53,51.5
+"Kansas City",MO,Midwest,1.47,942.1,64549,2023,346,125.8,0.1336,235.4,false,2,80,46.3
+"Las Vegas",NV,West,1.04,664.1,40312,2023,66,69.8,0.105,63.5,true,5,49,27.6
+"Los Angeles",CA,West,3.84,2455.6,333344,2023,384,177.0,0.0721,100.0,false,2,31,71.1
+"Memphis",TN,South,0.87,556.0,39969,2023,119,48.7,0.0876,136.8,false,1,54,24.1
+"Miami",FL,South,1.79,1142.9,172087,2023,72,56.5,0.0495,40.2,true,2,12,33.5
+"Minneapolis",MN,Midwest,1.54,988.4,147284,2023,209,79.1,0.08,135.7,false,2,57,44.9
+"New Orleans",LA,South,1.62,1034.8,72771,2023,164,96.0,0.0928,101.2,false,2,77,31.3
+"New York (Manhattan)",NY,Northeast,25.53,16339.8,,2023,437,150.8,0.0092,17.1,false,0,6,31.2
+"Orlando",FL,South,1.04,664.1,79345,2023,58,32.3,0.0486,55.8,true,0,31,31.4
+"Philadelphia",PA,Northeast,3.4,2177.6,343970,2023,321,111.1,0.051,94.4,false,1,43,45.6
+"Phoenix",AZ,West,0.84,540.5,62556,2023,108,51.8,0.0959,128.6,false,0,44,26.0
+"Pittsburgh",PA,Northeast,1.3,834.0,101121,2023,110,60.9,0.073,84.6,true,1,42,24.7
+"Portland",OR,West,2.27,1451.7,109874,2023,318,77.3,0.0533,140.1,false,0,33,26.2
+"Sacramento",CA,West,2.34,1498.1,128893,2023,637,128.1,0.0855,272.2,false,1,83,42.5
+"Salt Lake City",UT,West,1.33,849.4,54889,2023,185,113.7,0.1339,139.1,false,2,62,26.3
+"San Francisco",CA,West,6.2,3969.1,528088,2023,370,132.2,0.0333,59.7,true,0,28,35.5
+"Seattle",WA,West,4.17,2671.8,365321,2023,463,99.2,0.0371,111.0,false,0,32,32.4
+"St. Louis",MO,Midwest,1.79,1142.9,62768,2023,373,204.5,0.179,208.4,false,1,62,41.6
+"Washington",DC,South,7.34,4695.0,509158,2023,674,166.0,0.0354,91.8,false,0,8,12.5

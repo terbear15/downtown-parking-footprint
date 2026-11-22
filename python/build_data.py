@@ -44,6 +44,13 @@ NOT_SURFACE = {"underground", "multi-storey", "rooftop", "garage", "garages",
                "layby"}
 
 NAMES = {
+    "sandiego": ("San Diego", "CA"), "austin": ("Austin", "TX"), "sanantonio": ("San Antonio", "TX"),
+    "nashville": ("Nashville", "TN"), "columbus": ("Columbus", "OH"), "indianapolis": ("Indianapolis", "IN"),
+    "cincinnati": ("Cincinnati", "OH"), "milwaukee": ("Milwaukee", "WI"), "raleigh": ("Raleigh", "NC"),
+    "jacksonville": ("Jacksonville", "FL"), "tampa": ("Tampa", "FL"), "oklahomacity": ("Oklahoma City", "OK"),
+    "louisville": ("Louisville", "KY"), "richmond": ("Richmond", "VA"), "buffalo": ("Buffalo", "NY"),
+    "omaha": ("Omaha", "NE"), "albuquerque": ("Albuquerque", "NM"), "tucson": ("Tucson", "AZ"),
+    "hartford": ("Hartford", "CT"), "birmingham": ("Birmingham", "AL"), "elpaso": ("El Paso", "TX"),
     "atlanta": ("Atlanta", "GA"), "lasvegas": ("Las Vegas", "NV"), "saltlakecity": ("Salt Lake City", "UT"),
     "minneapolis": ("Minneapolis", "MN"), "washington": ("Washington", "DC"),
     "baltimore": ("Baltimore", "MD"), "boston": ("Boston", "MA"), "charlotte": ("Charlotte", "NC"),
@@ -55,6 +62,20 @@ NAMES = {
     "pittsburgh": ("Pittsburgh", "PA"), "portland": ("Portland", "OR"), "sacramento": ("Sacramento", "CA"),
     "sanfrancisco": ("San Francisco", "CA"), "seattle": ("Seattle", "WA"), "stlouis": ("St. Louis", "MO"),
 }
+
+
+# U.S. Census Bureau regions
+REGION = {}
+for st in "CT ME MA NH RI VT NJ NY PA".split():
+    REGION[st] = "Northeast"
+for st in "IL IN MI OH WI IA KS MN MO NE ND SD".split():
+    REGION[st] = "Midwest"
+for st in "DE DC FL GA MD NC SC VA WV AL KY MS TN AR LA OK TX".split():
+    REGION[st] = "South"
+for st in "AZ CO ID MT NV NM UT WY AK CA HI OR WA".split():
+    REGION[st] = "West"
+
+STRUCTURED = {"multi-storey", "rooftop"}
 
 
 class Proj:
@@ -209,9 +230,21 @@ def build_city(cid, b, core, osm):
     stops = [(proj.xy(s[1] / 1e5, s[0] / 1e5), s[2]) for s in osm["stops"]]
 
     lots = []
+    structures = []
     for L in osm["lots"]:
         t = L["tags"]
-        if (t.get("parking") or "surface") in NOT_SURFACE:
+        kind = t.get("parking") or "surface"
+        if kind in STRUCTURED:
+            outer = [[proj.xy(*p) for p in decode(r)] for r in L["outer"]]
+            outer = [r for r in outer if len(r) >= 3]
+            inside = sum(area_in_cells(r, cells, c) for r in outer)
+            if inside > 1:
+                structures.append({"id": L["id"], "name": t.get("name"), "kind": kind,
+                                   "acres": round(sum(abs(area(r)) for r in outer) / M2_PER_ACRE, 3),
+                                   "acresInside": round(inside / M2_PER_ACRE, 3),
+                                   "outer": [encode([proj.ll(*p) for p in r]) for r in outer]})
+            continue
+        if kind in NOT_SURFACE:
             continue
         outer = [[proj.xy(*p) for p in decode(r)] for r in L["outer"]]
         inner = [[proj.xy(*p) for p in decode(r)] for r in L.get("inner", [])]
@@ -277,15 +310,18 @@ def build_city(cid, b, core, osm):
         "candidates": {s: sum(1 for l in lots if l["score"] == s) for s in range(5)},
         "medianBldgCoverage": round(median_cov, 3),
         "transitStops": len(stops),
+        "structures": len(structures),
+        "structuredAcres": round(sum(x["acresInside"] for x in structures), 1),
         "jobs": b.get("jobs"),
         "lodesYear": b.get("lodesYear"),
     }
     city = {
         "id": cid, "name": name, "state": state,
         "core": [round(v, 5) for v in proj.ll(cxm, cym)],
+        "coreJobsPerAcre": core.get("jobsPerAcre"),
         "bounds": bounds, "outline": outline(cells, proj),
         "rule": b["rule"], "osmFetched": osm["fetched"][:10],
-        "stats": stats, "lots": lots,
+        "stats": stats, "lots": lots, "structures": structures,
     }
     return city
 
@@ -293,8 +329,7 @@ def build_city(cid, b, core, osm):
 def main():
     bounds = json.loads((RAW / "dpf_boundaries.json").read_text())["cities"]
     cores = json.loads((RAW / "dpf_cores.json").read_text())
-    extra = RAW / "dpf_boundaries_2.json"
-    if extra.exists():
+    for extra in sorted(RAW.glob("dpf_boundaries_*.json")):
         for k, v in json.loads(extra.read_text()).items():
             cores[k] = v.pop("core")
             bounds[k] = v
@@ -308,8 +343,8 @@ def main():
             print("missing OSM data:", cid)
             continue
         city = build_city(cid, bounds[cid], cores[cid], json.loads(f.read_text()))
-        for l in city["lots"]:
-            if l["acresInside"] == l["acres"]:
+        for l in city["lots"] + city["structures"]:
+            if l.get("acresInside") == l.get("acres"):
                 del l["acresInside"]
             for k in [k for k, v in l.items() if v is None or v == []]:
                 del l[k]
@@ -317,16 +352,36 @@ def main():
         p = OUT / "cities" / f"{cid}.json"
         p.write_text(text, encoding="utf-8")
         s = city["stats"]
-        index.append({"id": cid, "name": city["name"], "state": city["state"], "core": city["core"],
-                      "bounds": city["bounds"], "stats": {k: s[k] for k in (
-                          "downtownSqMi", "lots", "parkingAcres", "share", "candidates", "lodesYear")}})
+        index.append({"id": cid, "name": city["name"], "state": city["state"], "region": REGION[city["state"]],
+                      "core": city["core"], "bounds": city["bounds"], "stats": {k: s[k] for k in (
+                          "downtownSqMi", "downtownAcres", "lots", "parkingAcres", "share", "candidates",
+                          "lodesYear", "structures", "structuredAcres", "jobs")}})
         manifest["files"][f"cities/{cid}.json"] = {
             "sha256": hashlib.sha256(text.encode()).hexdigest(), "bytes": len(text),
             "lots": s["lots"], "parkingAcres": s["parkingAcres"], "share": s["share"],
             "downtownCells": len(bounds[cid]["cells"]), "osmFetched": city["osmFetched"]}
         print(f"{cid:14s} lots={s['lots']:5d} parking={s['parkingAcres']:7.1f} ac share={s['share']*100:5.1f}% "
               f"score4={s['candidates'][4]:3d} {len(text)/1024:6.0f} KB")
-    text = json.dumps({"built": manifest["built"], "osmFetched": max(v["osmFetched"] for k, v in manifest["files"].items() if k.startswith("cities/")), "cities": index}, separators=(",", ":"))
+    # OSM coverage: lots mapped per square mile; the lowest quarter (excluding the Manhattan special case) is flagged
+    dens = sorted(c["stats"]["lots"] / c["stats"]["downtownSqMi"] for c in index if c["id"] != "newyork")
+    q1 = dens[len(dens) // 4]
+    med_share = statistics.median(c["stats"]["share"] for c in index)
+    order = sorted(index, key=lambda c: -c["stats"]["share"])
+    for c in index:
+        c["stats"]["lotsPerSqMi"] = round(c["stats"]["lots"] / c["stats"]["downtownSqMi"], 1)
+        c["lowCoverage"] = c["id"] != "newyork" and c["stats"]["lotsPerSqMi"] < q1
+        c["rank"] = order.index(c) + 1
+    rows = ["city,state,region,downtown_sq_mi,downtown_acres,jobs_lodes,lodes_year,surface_lots,surface_parking_acres,share_of_downtown,"
+            "lots_per_sq_mi,possible_osm_undermapping,score4_candidates,score3_candidates,structured_parking_acres"]
+    for c in index:
+        s_ = c["stats"]
+        rows.append(",".join(str(x) for x in [f'"{c["name"]}"', c["state"], c["region"], s_["downtownSqMi"], s_["downtownAcres"],
+                    s_["jobs"] if s_["jobs"] is not None else "", s_["lodesYear"], s_["lots"], s_["parkingAcres"], s_["share"],
+                    s_["lotsPerSqMi"], str(c["lowCoverage"]).lower(), s_["candidates"][4], s_["candidates"][3], s_["structuredAcres"]]))
+    csv = "\n".join(rows) + "\n"
+    (OUT / "summary.csv").write_text(csv, encoding="utf-8")
+    manifest["files"]["summary.csv"] = {"sha256": hashlib.sha256(csv.encode()).hexdigest(), "bytes": len(csv)}
+    text = json.dumps({"built": manifest["built"], "medianShare": round(med_share, 4), "osmFetched": max(v["osmFetched"] for k, v in manifest["files"].items() if k.startswith("cities/")), "cities": index}, separators=(",", ":"))
     (OUT / "index.json").write_text(text, encoding="utf-8")
     manifest["files"]["index.json"] = {"sha256": hashlib.sha256(text.encode()).hexdigest(), "bytes": len(text)}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")

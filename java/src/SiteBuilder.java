@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * Build step for Downtown Parking Footprint.
  * Reads java/template/index.html, stamps the build date and the OSM fetch date
  * (taken from docs/data/index.json, written by python/build_data.py),
- * and writes docs/index.html for GitHub Pages.
+ * and writes docs/index.html (plus docs/app.js) for GitHub Pages.
  */
 public class SiteBuilder {
     public static void main(String[] args) throws IOException {
@@ -28,6 +28,8 @@ public class SiteBuilder {
             .replace("{{BUILD_DATE}}", LocalDate.now().toString())
             .replace("{{DATA_DATE}}", dataDate);
         Files.writeString(out, html, StandardCharsets.UTF_8);
+        // the map application script is copied as-is
+        Files.copy(Paths.get("java", "template", "app.js"), Paths.get("docs", "app.js"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         System.out.println("wrote " + out + " (OSM data " + dataDate + ")");
     }
 }
