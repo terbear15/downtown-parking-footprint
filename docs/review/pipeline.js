@@ -167,7 +167,7 @@
   AI.loadReviews = async () => {
     const get = p => fetch(p).then(r => r.ok ? r.json() : null).catch(() => null);
     AI.rounds = [];
-    for (const [n, sp, ap] of [[1, 'review.json', 'round1_results.json'], [2, 'review_r2.json', 'round2_results.json'], [3, 'review_r3.json', 'round3_results.json'], [4, 'review_r4.json', 'round4_results.json'], [5, 'review_r5.json', 'round5_results.json'], [6, 'review_r6.json', 'round6_results.json']]) {
+    for (const [n, sp, ap] of [[1, 'review.json', 'round1_results.json'], [2, 'review_r2.json', 'round2_results.json'], [3, 'review_r3.json', 'round3_results.json'], [4, 'review_r4.json', 'round4_results.json'], [5, 'review_r5.json', 'round5_results.json'], [6, 'review_r6.json', 'round6_results.json'], [7, 'review_r7.json', 'round7_results.json']]) {
       const s = await get(sp), a = await get(ap); if (s && a) AI.rounds.push({ n, set: s, ans: a.answers || a });
     }
     AI.reviewed = [];   // {round,id,city,a,kind,poly|mask,x,y}
@@ -317,26 +317,55 @@
   };
   AI.valid = (s, npx) => { if (!s || !s.poly || s.poly.length < 4 || !s.poly.every(p => isFinite(p[0]) && isFinite(p[1]))) return false; const a = AI.polyArea(s.poly); return a >= 0.6 * npx && a <= 1.8 * npx; };
 
+
+  /* ---------- round 7: NIR band, simple polygon fitting ---------- */
+  AI.nirImage = (x, y) => new Promise(res => {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => { const c = new OffscreenCanvas(IN, IN), g = c.getContext('2d'); g.drawImage(im, 0, 0, IN, IN); const d = g.getImageData(0, 0, IN, IN).data, o = new Uint8Array(IN * IN); for (let i = 0; i < o.length; i++) o[i] = d[i * 4]; res(o); };
+    im.onerror = () => res(null);
+    im.src = AI.tpl.replace('asset_bidx=image%7C1,2,3', 'asset_bidx=image%7C4').replace('{z}', Z).replace('{x}', x).replace('{y}', y);
+  });
+  /* rasterise a polygon (local pixel coords) into a W x H grid */
+  const rasterPoly = (poly, W, H) => { const c = new OffscreenCanvas(W, H), g = c.getContext('2d'); g.fillStyle = '#000'; g.beginPath(); poly.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); const d = g.getImageData(0, 0, W, H).data, m = new Uint8Array(W * H); for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3] > 127 ? 1 : 0; return m; };
+  /* fit a 3-6 sided polygon: candidates = oriented rectangle, simplified hull, simplified right-angled trace; best IoU wins, fewer sides preferred */
+  AI.simpleShape = (px, maxV) => {
+    maxV = maxV || 6; const h = AI.hull(px); if (h.length < 3) return null; const r = AI.minRect(h); if (!r) return null;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of px) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const pad = 4, W = x1 - x0 + 1 + 2 * pad, H = y1 - y0 + 1 + 2 * pad, M = new Uint8Array(W * H); for (const [x, y] of px) M[(y - y0 + pad) * W + (x - x0 + pad)] = 1;
+    const loc = poly => poly.map(([x, y]) => [x - x0 + pad, y - y0 + pad]);
+    const iou = poly => { const R = rasterPoly(loc(poly), W, H); let i = 0, u = 0; for (let k = 0; k < M.length; k++) { if (M[k] && R[k]) i++; if (M[k] || R[k]) u++; } return u ? i / u : 0; };
+    const back = (u, v) => [u * r.ux - v * r.uy, u * r.uy + v * r.ux];
+    const cands = [];
+    cands.push({ kind: 'rectangle', poly: [back(r.u0, r.v0), back(r.u1 + 1, r.v0), back(r.u1 + 1, r.v1 + 1), back(r.u0, r.v1 + 1)] });
+    const hc = h.map(([x, y]) => [x + 0.5, y + 0.5]); for (const e of [1, 2, 3, 4, 6, 8, 12, 16]) { const q = AI.dpRing(hc, e); if (q.length <= maxV && q.length >= 3) { cands.push({ kind: 'polygon', poly: q }); break; } }
+    const o = AI.shapeOf(px); if (o && o.poly) { for (const e of [2, 3, 4, 6, 8, 12, 16, 24]) { const q = AI.dpRing(o.poly, e); if (q.length <= maxV && q.length >= 3) { cands.push({ kind: 'polygon', poly: q }); break; } } }
+    let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.012 * c.poly.length; if (!best || c.score > best.score) best = c; }
+    return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly } : null;
+  };
+
   /* ---------- city-wide inference ---------- */
   AI.inferMosaic = async (id, model, o) => {
-    o = Object.assign({ thr: 0.6, minM2: 2000, minProb: 0.8, maxOsm: 0.3, maxBld: 0.15, maxLu: 2, maxGreen: 2, snap: false, round: 4 }, o || {});
+    o = Object.assign({ thr: 0.6, minM2: 2000, minProb: 0.8, maxOsm: 0.3, maxBld: 0.15, maxLu: 2, maxGreen: 2, snap: false, ndvi: 0, lo: 0, simple: 0, keepAi: false, cap: 0, round: 4 }, o || {});
     const d = await AI.city(id); const tiles = await AI.tilesFor(id); let bld = []; try { bld = await AI.buildings(id); } catch (e) {}
     const xs = tiles.map(t => t[0]), ys = tiles.map(t => t[1]); const x0 = Math.min(...xs), y0 = Math.min(...ys), W = (Math.max(...xs) - x0 + 1) * IN, H = (Math.max(...ys) - y0 + 1) * IN;
     const prob = new Uint8Array(W * H); const imgs = await pool(tiles, 8, t => AI.image(t[0], t[1]));
     tiles.forEach(([x, y], k) => { const img = imgs[k]; if (!img) return; const p = AI.predictTile(model, img), ox = (x - x0) * IN, oy = (y - y0) * IN; for (let r = 0; r < IN; r++) for (let c = 0; c < IN; c++) prob[(oy + r) * W + ox + c] = Math.round(p[r * IN + c] * 255); });
     let bin = new Uint8Array(W * H); const t = Math.round(o.thr * 255); for (let i = 0; i < W * H; i++) bin[i] = prob[i] >= t ? 1 : 0;
+    let veg = null; if (o.ndvi) { const nirs = await pool(tiles, 8, t2 => AI.nirImage(t2[0], t2[1])); veg = new Uint8Array(W * H); tiles.forEach(([x, y], k) => { const n = nirs[k], im = imgs[k]; if (!n || !im) return; const ox = (x - x0) * IN, oy = (y - y0) * IN; for (let r2 = 0; r2 < IN; r2++) for (let c2 = 0; c2 < IN; c2++) { const j = r2 * IN + c2, R = im[j * 3], N = n[j]; if ((N - R) / (N + R + 1) > o.ndvi) veg[(oy + r2) * W + ox + c2] = 1; } }); }
+    if (o.lo) { const lo = Math.round(o.lo * 255); const st = []; for (let i = 0; i < W * H; i++) if (bin[i]) st.push(i); while (st.length) { const q = st.pop(), r2 = (q / W) | 0, c2 = q % W; for (const n of [c2 + 1 < W ? q + 1 : -1, c2 > 0 ? q - 1 : -1, r2 + 1 < H ? q + W : -1, r2 > 0 ? q - W : -1]) if (n >= 0 && !bin[n] && prob[n] >= lo && !(veg && veg[n])) { bin[n] = 1; st.push(n); } } }
+    if (veg) for (let i = 0; i < W * H; i++) if (veg[i]) bin[i] = 0;
     bin = AI.dil(AI.ero(bin, W, H, 2), W, H, 2); bin = AI.ero(AI.dil(bin, W, H, 3), W, H, 3);
     const cv = new OffscreenCanvas(W, H), g = cv.getContext('2d');
-    g.fillStyle = 'rgba(255,0,0,1)'; for (const l of d.lots) AI.paint(g, ringsOfLot(l), x0, y0); for (const s of (d.structures || [])) AI.paint(g, ringsOfLot(s), x0, y0); for (const a of (d.aiLots || [])) AI.paint(g, ringsOfLot(a), x0, y0);
+    g.fillStyle = 'rgba(255,0,0,1)'; for (const l of d.lots) AI.paint(g, ringsOfLot(l), x0, y0); for (const s of (d.structures || [])) AI.paint(g, ringsOfLot(s), x0, y0); if (!o.keepAi) for (const a of (d.aiLots || [])) AI.paint(g, ringsOfLot(a), x0, y0);
     const known = g.getImageData(0, 0, W, H).data.slice(); g.clearRect(0, 0, W, H);
-    g.fillStyle = '#0f0'; for (const it of AI.reviewed.filter(r => r.city === id)) { if (it.kind === 'poly') AI.paint(g, [it.poly], x0, y0); else { const m = itemMask(it, it.x, it.y), ox = (it.x - x0) * IN, oy = (it.y - y0) * IN; if (ox < 0 || oy < 0 || ox + IN > W || oy + IN > H) continue; const im = g.getImageData(ox, oy, IN, IN); for (let j = 0; j < IN * IN; j++) if (m[j]) { im.data[j * 4 + 1] = 255; im.data[j * 4 + 3] = 255; } g.putImageData(im, ox, oy); } }
+    g.fillStyle = '#0f0'; for (const it of AI.reviewed.filter(r => r.city === id && !(o.keepAi && (r.a === 'yes' || r.a === 'rough')))) { if (it.kind === 'poly') AI.paint(g, [it.poly], x0, y0); else { const m = itemMask(it, it.x, it.y), ox = (it.x - x0) * IN, oy = (it.y - y0) * IN; if (ox < 0 || oy < 0 || ox + IN > W || oy + IN > H) continue; const im = g.getImageData(ox, oy, IN, IN); for (let j = 0; j < IN * IN; j++) if (m[j]) { im.data[j * 4 + 1] = 255; im.data[j * 4 + 3] = 255; } g.putImageData(im, ox, oy); } }
     const rev = g.getImageData(0, 0, W, H).data.slice(); g.clearRect(0, 0, W, H);
     g.fillStyle = '#00f'; for (const b of bld) AI.paint(g, [b], x0, y0); const bd = g.getImageData(0, 0, W, H).data.slice(); g.clearRect(0, 0, W, H);
     let lu = null; if (o.maxLu <= 1) { let L = []; try { L = await AI.landuse(id); } catch (e) {} g.fillStyle = '#0f0'; for (const r of L) AI.paint(g, [r], x0, y0); lu = g.getImageData(0, 0, W, H).data; }
     let greenD = null;
     if (o.snap || o.maxGreen <= 1) { let C = { roads: [], green: [] }; try { C = await AI.context(id); } catch (e) {}
       if (o.snap) { g.strokeStyle = '#000'; AI.strokeRoads(g, C.roads, x0, y0, AI.mpp(d.core[1])); const rd = g.getImageData(0, 0, W, H).data; g.clearRect(0, 0, W, H);
-        for (let i = 0; i < W * H; i++) if (rd[i * 4 + 3] > 127 || bd[i * 4 + 3] > 127) bin[i] = 0; bin = AI.dil(AI.ero(bin, W, H, 1), W, H, 1); }
+        for (let i = 0; i < W * H; i++) if (rd[i * 4 + 3] > 127 || bd[i * 4 + 3] > 127 || (veg && veg[i])) bin[i] = 0; bin = AI.dil(AI.ero(bin, W, H, 1), W, H, 1); }
       if (o.maxGreen <= 1) { g.fillStyle = '#000'; for (const r of C.green) AI.paint(g, [r], x0, y0); greenD = g.getImageData(0, 0, W, H).data; g.clearRect(0, 0, W, H); } }
     const pxm = 40075016.686 * Math.cos(d.core[1] * Math.PI / 180) / 2 ** Z / IN; const lab = new Uint8Array(W * H), dets = []; const why = { small: 0, osm: 0, rev: 0, prob: 0, roof: 0, landuse: 0, shape: 0 };
     for (let i = 0; i < W * H; i++) { if (!bin[i] || lab[i]) continue; const comp = [], st = [i]; lab[i] = 1;
@@ -345,9 +374,9 @@
       let osm = 0, rv = 0, rf = 0, lf = 0, gf = 0, ps = 0; for (const q of comp) { if (greenD && greenD[q * 4 + 3] > 127) gf++; if (known[q * 4 + 3] > 127) osm++; if (rev[q * 4 + 3] > 127) rv++; if (bd[q * 4 + 3] > 127) rf++; if (lu && lu[q * 4 + 3] > 127) lf++; ps += prob[q]; }
       const n = comp.length, mp = ps / n / 255;
       if (osm / n > o.maxOsm) { why.osm++; continue; } if (rv / n > 0.3) { why.rev++; continue; } if (mp < o.minProb) { why.prob++; continue; } if (rf / n > o.maxBld) { why.roof++; continue; } if (lf / n > o.maxLu) { why.landuse++; continue; } if (gf / n > o.maxGreen) { why.green = (why.green || 0) + 1; continue; }
-      const pts = comp.map(q => [q % W, (q / W) | 0]); const s = AI.shapeOf(pts); if (!AI.valid(s, n)) { why.shape++; continue; }
+      const pts = comp.map(q => [q % W, (q / W) | 0]); const s = o.simple ? AI.simpleShape(pts, o.simple) : AI.shapeOf(pts); if (!s || !(o.simple ? s.iou >= 0.6 && s.poly.length >= 3 : AI.valid(s, n))) { why.shape++; continue; }
       const poly = s.poly.map(([px, py]) => [+x2lon(x0 + px / IN, Z).toFixed(6), +y2lat(y0 + py / IN, Z).toFixed(6)]); let sx = 0, sy = 0; for (const [px, py] of pts) { sx += px; sy += py; }
-      dets.push({ id: id + '-r' + o.round + '-' + comp[0], city: id, cityName: d.name, lon: +x2lon(x0 + sx / n / IN, Z).toFixed(6), lat: +y2lat(y0 + sy / n / IN, Z).toFixed(6), acres: +(AI.polyArea(s.poly) * pxm * pxm / 4046.856).toFixed(3), prob: +mp.toFixed(3), roof: +(rf / n).toFixed(3), landuse: +(lf / n).toFixed(3), shape: s.shape, corners: s.poly.length, fill: s.fill, poly }); }
+      dets.push({ id: id + '-r' + o.round + '-' + comp[0], city: id, cityName: d.name, lon: +x2lon(x0 + sx / n / IN, Z).toFixed(6), lat: +y2lat(y0 + sy / n / IN, Z).toFixed(6), acres: +(AI.polyArea(s.poly) * pxm * pxm / 4046.856).toFixed(3), prob: +mp.toFixed(3), roof: +(rf / n).toFixed(3), landuse: +(lf / n).toFixed(3), shape: s.shape, corners: s.poly.length, fill: s.fill, fitIoU: s.iou, poly }); }
     AI.why = AI.why || {}; for (const k in why) AI.why[k] = (AI.why[k] || 0) + why[k];
     return dets;
   };
