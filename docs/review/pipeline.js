@@ -53,19 +53,21 @@
   /* OSM building footprints (Overpass), rings in lon/lat */
   const bldCache = AI._bld = AI._bld || {};
   /* minimal Mapbox Vector Tile decoder: polygons of one layer, in lon/lat */
-  function mvtPolys(buf, layerName, tz, tx, ty) {
+  function mvtPolys(buf, layerName, tz, tx, ty, keep) {
     const u = new Uint8Array(buf); let p = 0; const out = [];
     const varint = () => { let r = 0, s = 0, b; do { b = u[p++]; r += (b & 0x7f) * 2 ** s; s += 7; } while (b & 0x80); return r; };
     const skip = w => { if (w === 0) varint(); else if (w === 1) p += 8; else if (w === 2) { const l = varint(); p += l; } else if (w === 5) p += 4; };
     while (p < u.length) { const k = varint(), f = k >> 3, w = k & 7; if (f !== 3 || w !== 2) { skip(w); continue; }
-      const len = varint(), end = p + len; let name = '', extent = 4096; const feats = [];
+      const len = varint(), end = p + len; let name = '', extent = 4096; const feats = [], keys = [], vals = [];
       while (p < end) { const k2 = varint(), f2 = k2 >> 3, w2 = k2 & 7;
         if (f2 === 1 && w2 === 2) { const l = varint(); name = new TextDecoder().decode(u.subarray(p, p + l)); p += l; }
         else if (f2 === 5 && w2 === 0) extent = varint();
-        else if (f2 === 2 && w2 === 2) { const l = varint(), fe = p + l; let type = 0, geom = null; while (p < fe) { const k3 = varint(), f3 = k3 >> 3, w3 = k3 & 7; if (f3 === 3 && w3 === 0) type = varint(); else if (f3 === 4 && w3 === 2) { const gl = varint(), ge = p + gl; geom = []; while (p < ge) geom.push(varint()); } else skip(w3); } p = fe; feats.push([type, geom]); }
+        else if (f2 === 3 && w2 === 2) { const l = varint(); keys.push(new TextDecoder().decode(u.subarray(p, p + l))); p += l; }
+        else if (f2 === 4 && w2 === 2) { const l = varint(), ve = p + l; let v = null; while (p < ve) { const k4 = varint(), f4 = k4 >> 3, w4 = k4 & 7; if (f4 === 1 && w4 === 2) { const sl = varint(); v = new TextDecoder().decode(u.subarray(p, p + sl)); p += sl; } else if (w4 === 0) v = varint(); else skip(w4); } p = ve; vals.push(v); }
+        else if (f2 === 2 && w2 === 2) { const l = varint(), fe = p + l; let type = 0, geom = null, tags = []; while (p < fe) { const k3 = varint(), f3 = k3 >> 3, w3 = k3 & 7; if (f3 === 2 && w3 === 2) { const tl = varint(), te = p + tl; while (p < te) tags.push(varint()); } else if (f3 === 3 && w3 === 0) type = varint(); else if (f3 === 4 && w3 === 2) { const gl = varint(), ge = p + gl; geom = []; while (p < ge) geom.push(varint()); } else skip(w3); } p = fe; feats.push([type, geom, tags]); }
         else skip(w2); }
       p = end; if (name !== layerName) continue;
-      for (const [type, g] of feats) { if (type !== 3 || !g) continue; let x = 0, y = 0, i = 0, ring = null;
+      for (const [type, g, tags] of feats) { if (type !== 3 || !g) continue; if (keep) { const pr = {}; for (let q = 0; q + 1 < tags.length; q += 2) pr[keys[tags[q]]] = vals[tags[q + 1]]; if (!keep(pr)) continue; } let x = 0, y = 0, i = 0, ring = null;
         while (i < g.length) { const c = g[i++], cmd = c & 7, n = c >> 3;
           if (cmd === 7) { if (ring && ring.length > 2) out.push(ring); ring = null; continue; }
           for (let j = 0; j < n; j++) { const dx = g[i++], dy = g[i++]; x += (dx >> 1) ^ -(dx & 1); y += (dy >> 1) ^ -(dy & 1);
@@ -82,6 +84,24 @@
     return bldCache[id] = parts.flat();
   };
 
+  /* industrial / railway / port land (container yards, rail yards) from OFM landuse; construction from Overpass when reachable */
+  const luCache = AI._lu = AI._lu || {};
+  AI.landuse = async id => {
+    if (luCache[id]) return luCache[id];
+    if (!AI.ofm) AI.ofm = (await fetch('https://tiles.openfreemap.org/planet').then(r => r.json())).tiles[0];
+    const d = await AI.city(id), [[w, s], [e, n]] = d.bounds, m = 0.004, tz = 14;
+    const X0 = Math.floor(lon2x(w - m, tz)), X1 = Math.floor(lon2x(e + m, tz)), Y0 = Math.floor(lat2y(n + m, tz)), Y1 = Math.floor(lat2y(s - m, tz)); const jobs = [];
+    for (let x = X0; x <= X1; x++) for (let y = Y0; y <= Y1; y++) jobs.push([x, y]);
+    const keep = pr => ['industrial', 'railway', 'garages'].includes(pr.class);
+    const parts = await pool(jobs, 6, async ([x, y]) => { for (let t = 0; t < 3; t++) { try { const r = await fetch(AI.ofm.replace('{z}', tz).replace('{x}', x).replace('{y}', y)); if (r.status === 204 || r.status === 404) return []; if (!r.ok) throw r.status; return mvtPolys(await r.arrayBuffer(), 'landuse', tz, x, y, keep); } catch (err) { await new Promise(r => setTimeout(r, 1500)); } } return []; });
+    let cons = [];
+    try { const q = '[out:json][timeout:25];(way["landuse"~"construction|brownfield"](' + (s - m) + ',' + (w - m) + ',' + (n + m) + ',' + (e + m) + ');way["man_made"="storage_tank"](' + (s - m) + ',' + (w - m) + ',' + (n + m) + ',' + (e + m) + '););out geom;'; const ac = new AbortController(), to = setTimeout(() => ac.abort(), 25000);
+      const j = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ac.signal }).then(r => r.json()); clearTimeout(to); cons = j.elements.filter(el => el.geometry).map(el => el.geometry.map(p => [p.lon, p.lat])); AI.overpassOk = true; } catch (e) { AI.overpassOk = AI.overpassOk || false; }
+    return luCache[id] = parts.flat().concat(cons);
+  };
+  const lIdx = {};
+  AI.luTile = (id, tx, ty) => { const b = luCache[id]; if (!b) return []; if (!lIdx[id]) { const m = new Map(); b.forEach(r => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [lo, la] of r) { const x = lon2x(lo, Z), y = lat2y(la, Z); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } for (let X = Math.floor(x0); X <= Math.floor(x1); X++) for (let Y = Math.floor(y0); Y <= Math.floor(y1); Y++) { const key = X + ',' + Y; if (!m.has(key)) m.set(key, []); m.get(key).push(r); } }); lIdx[id] = m; } return lIdx[id].get(tx + ',' + ty) || []; };
+
   /* buildings touching a z17 tile, via a tile-bucket index */
   const bIdx = {};
   AI.bldTile = (id, tx, ty) => { const b = bldCache[id]; if (!b) return []; if (!bIdx[id]) { const m = new Map(); b.forEach((r, k) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [lo, la] of r) { const x = lon2x(lo, Z), y = lat2y(la, Z); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } for (let X = Math.floor(x0); X <= Math.floor(x1); X++) for (let Y = Math.floor(y0); Y <= Math.floor(y1); Y++) { const key = X + ',' + Y; if (!m.has(key)) m.set(key, []); m.get(key).push(r); } }); bIdx[id] = m; } return bIdx[id].get(tx + ',' + ty) || []; };
@@ -95,7 +115,7 @@
   AI.loadReviews = async () => {
     const get = p => fetch(p).then(r => r.ok ? r.json() : null).catch(() => null);
     AI.rounds = [];
-    for (const [n, sp, ap] of [[1, 'review.json', 'round1_results.json'], [2, 'review_r2.json', 'round2_results.json'], [3, 'review_r3.json', 'round3_results.json']]) {
+    for (const [n, sp, ap] of [[1, 'review.json', 'round1_results.json'], [2, 'review_r2.json', 'round2_results.json'], [3, 'review_r3.json', 'round3_results.json'], [4, 'review_r4.json', 'round4_results.json'], [5, 'review_r5.json', 'round5_results.json']]) {
       const s = await get(sp), a = await get(ap); if (s && a) AI.rounds.push({ n, set: s, ans: a.answers || a });
     }
     AI.reviewed = [];   // {round,id,city,a,kind,poly|mask,x,y}
@@ -111,7 +131,7 @@
   /* ---------- dataset ---------- */
   function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
   AI.buildDS = async (o) => {
-    o = Object.assign({ posPerCity: 22, negPerCity: 6, testFrac: 0.25, testRound: 3, bldW: 3 }, o || {});
+    o = Object.assign({ posPerCity: 22, negPerCity: 6, testFrac: 0.25, testRound: 3, bldW: 3, luW: 0 }, o || {});
     const R = rng(7); AI.DS = { train: { X: [], Y: [], W: [], meta: [] }, val: { X: [], Y: [], W: [], meta: [] }, fbTest: { X: [], Y: [], W: [], meta: [] } };
     // hold back a share of the latest round's answers as a fair test
     AI.testIds = new Set(AI.reviewed.filter(it => it.round === o.testRound).filter(() => R() < o.testFrac).map(it => it.id));
@@ -119,7 +139,7 @@
     const valCities = new Set(['denver', 'detroit', 'milwaukee', 'cleveland', 'indianapolis'].filter(c => ids.includes(c)));
     for (const id of ids) {
       AI.prog = 'ds ' + id;
-      const d = await AI.city(id); let bld = []; try { bld = await AI.buildings(id); } catch (e) { AI.bldErr = (AI.bldErr || []).concat(id); }
+      const d = await AI.city(id); let bld = []; try { bld = await AI.buildings(id); } catch (e) { AI.bldErr = (AI.bldErr || []).concat(id); } if (o.luW) { try { await AI.landuse(id); } catch (e) {} }
       const tiles = await AI.tilesFor(id); const pos = [], neg = [];
       const lotRings = d.lots.map(ringsOfLot).concat((d.aiLots || []).map(ringsOfLot));
       const strRings = (d.structures || []).map(ringsOfLot);
@@ -134,10 +154,11 @@
       jobs.forEach(([t, kind, its], k) => {
         const img = imgs[k]; if (!img) return; const [tx, ty] = t;
         const c = new OffscreenCanvas(IN, IN), g = c.getContext('2d');
+        if (o.luW) { g.fillStyle = '#0f0'; for (const r of AI.luTile(id, tx, ty)) AI.paint(g, [r], tx, ty); }
         g.fillStyle = '#00f'; for (const b of AI.bldTile(id, tx, ty)) AI.paint(g, [b], tx, ty); for (const s of strRings) AI.paint(g, s, tx, ty);
         g.fillStyle = '#f00'; for (const l of lotRings) AI.paint(g, l, tx, ty);
         const px = g.getImageData(0, 0, IN, IN).data, Y = new Uint8Array(IN * IN), W = new Float32Array(IN * IN).fill(1);
-        for (let i = 0; i < IN * IN; i++) { if (px[i * 4] > 127) Y[i] = 1; else if (px[i * 4 + 2] > 127) W[i] = o.bldW; }
+        for (let i = 0; i < IN * IN; i++) { if (px[i * 4] > 127) Y[i] = 1; else if (px[i * 4 + 2] > 127) W[i] = o.bldW; else if (px[i * 4 + 1] > 127) W[i] = o.luW; }
         const meta = [id, tx, ty, kind, []];
         if (its) for (const it of its) { const m = itemMask(it, tx, ty); meta[4].push([it.kind, it.id, it.a]);
           if (kind === 'test' && AI.testIds.has(it.id)) continue;
@@ -239,7 +260,7 @@
 
   /* ---------- city-wide inference ---------- */
   AI.inferMosaic = async (id, model, o) => {
-    o = Object.assign({ thr: 0.6, minM2: 2000, minProb: 0.8, maxOsm: 0.3, maxBld: 0.15, round: 4 }, o || {});
+    o = Object.assign({ thr: 0.6, minM2: 2000, minProb: 0.8, maxOsm: 0.3, maxBld: 0.15, maxLu: 2, round: 4 }, o || {});
     const d = await AI.city(id); const tiles = await AI.tilesFor(id); let bld = []; try { bld = await AI.buildings(id); } catch (e) {}
     const xs = tiles.map(t => t[0]), ys = tiles.map(t => t[1]); const x0 = Math.min(...xs), y0 = Math.min(...ys), W = (Math.max(...xs) - x0 + 1) * IN, H = (Math.max(...ys) - y0 + 1) * IN;
     const prob = new Uint8Array(W * H); const imgs = await pool(tiles, 8, t => AI.image(t[0], t[1]));
@@ -251,17 +272,18 @@
     const known = g.getImageData(0, 0, W, H).data.slice(); g.clearRect(0, 0, W, H);
     g.fillStyle = '#0f0'; for (const it of AI.reviewed.filter(r => r.city === id)) { if (it.kind === 'poly') AI.paint(g, [it.poly], x0, y0); else { const m = itemMask(it, it.x, it.y), ox = (it.x - x0) * IN, oy = (it.y - y0) * IN; if (ox < 0 || oy < 0 || ox + IN > W || oy + IN > H) continue; const im = g.getImageData(ox, oy, IN, IN); for (let j = 0; j < IN * IN; j++) if (m[j]) { im.data[j * 4 + 1] = 255; im.data[j * 4 + 3] = 255; } g.putImageData(im, ox, oy); } }
     const rev = g.getImageData(0, 0, W, H).data.slice(); g.clearRect(0, 0, W, H);
-    g.fillStyle = '#00f'; for (const b of bld) AI.paint(g, [b], x0, y0); const bd = g.getImageData(0, 0, W, H).data;
-    const pxm = 40075016.686 * Math.cos(d.core[1] * Math.PI / 180) / 2 ** Z / IN; const lab = new Uint8Array(W * H), dets = []; const why = { small: 0, osm: 0, rev: 0, prob: 0, roof: 0, shape: 0 };
+    g.fillStyle = '#00f'; for (const b of bld) AI.paint(g, [b], x0, y0); const bd = g.getImageData(0, 0, W, H).data.slice(); g.clearRect(0, 0, W, H);
+    let lu = null; if (o.maxLu <= 1) { let L = []; try { L = await AI.landuse(id); } catch (e) {} g.fillStyle = '#0f0'; for (const r of L) AI.paint(g, [r], x0, y0); lu = g.getImageData(0, 0, W, H).data; }
+    const pxm = 40075016.686 * Math.cos(d.core[1] * Math.PI / 180) / 2 ** Z / IN; const lab = new Uint8Array(W * H), dets = []; const why = { small: 0, osm: 0, rev: 0, prob: 0, roof: 0, landuse: 0, shape: 0 };
     for (let i = 0; i < W * H; i++) { if (!bin[i] || lab[i]) continue; const comp = [], st = [i]; lab[i] = 1;
       while (st.length) { const q = st.pop(); comp.push(q); const r = (q / W) | 0, c = q % W; for (const n of [c + 1 < W ? q + 1 : -1, c > 0 ? q - 1 : -1, r + 1 < H ? q + W : -1, r > 0 ? q - W : -1]) if (n >= 0 && bin[n] && !lab[n]) { lab[n] = 1; st.push(n); } }
       const area = comp.length * pxm * pxm; if (area < o.minM2) { why.small++; continue; }
-      let osm = 0, rv = 0, rf = 0, ps = 0; for (const q of comp) { if (known[q * 4 + 3] > 127) osm++; if (rev[q * 4 + 3] > 127) rv++; if (bd[q * 4 + 3] > 127) rf++; ps += prob[q]; }
+      let osm = 0, rv = 0, rf = 0, lf = 0, ps = 0; for (const q of comp) { if (known[q * 4 + 3] > 127) osm++; if (rev[q * 4 + 3] > 127) rv++; if (bd[q * 4 + 3] > 127) rf++; if (lu && lu[q * 4 + 3] > 127) lf++; ps += prob[q]; }
       const n = comp.length, mp = ps / n / 255;
-      if (osm / n > o.maxOsm) { why.osm++; continue; } if (rv / n > 0.3) { why.rev++; continue; } if (mp < o.minProb) { why.prob++; continue; } if (rf / n > o.maxBld) { why.roof++; continue; }
+      if (osm / n > o.maxOsm) { why.osm++; continue; } if (rv / n > 0.3) { why.rev++; continue; } if (mp < o.minProb) { why.prob++; continue; } if (rf / n > o.maxBld) { why.roof++; continue; } if (lf / n > o.maxLu) { why.landuse++; continue; }
       const pts = comp.map(q => [q % W, (q / W) | 0]); const s = AI.shapeOf(pts); if (!AI.valid(s, n)) { why.shape++; continue; }
       const poly = s.poly.map(([px, py]) => [+x2lon(x0 + px / IN, Z).toFixed(6), +y2lat(y0 + py / IN, Z).toFixed(6)]); let sx = 0, sy = 0; for (const [px, py] of pts) { sx += px; sy += py; }
-      dets.push({ id: id + '-r' + o.round + '-' + comp[0], city: id, cityName: d.name, lon: +x2lon(x0 + sx / n / IN, Z).toFixed(6), lat: +y2lat(y0 + sy / n / IN, Z).toFixed(6), acres: +(AI.polyArea(s.poly) * pxm * pxm / 4046.856).toFixed(3), prob: +mp.toFixed(3), roof: +(rf / n).toFixed(3), shape: s.shape, corners: s.poly.length, fill: s.fill, poly }); }
+      dets.push({ id: id + '-r' + o.round + '-' + comp[0], city: id, cityName: d.name, lon: +x2lon(x0 + sx / n / IN, Z).toFixed(6), lat: +y2lat(y0 + sy / n / IN, Z).toFixed(6), acres: +(AI.polyArea(s.poly) * pxm * pxm / 4046.856).toFixed(3), prob: +mp.toFixed(3), roof: +(rf / n).toFixed(3), landuse: +(lf / n).toFixed(3), shape: s.shape, corners: s.poly.length, fill: s.fill, poly }); }
     AI.why = AI.why || {}; for (const k in why) AI.why[k] = (AI.why[k] || 0) + why[k];
     return dets;
   };
