@@ -313,7 +313,8 @@
     g = AI.ero(AI.dil(g, W, H, 2), W, H, 2); g = AI.dil(AI.ero(g, W, H, 1), W, H, 1);
     const ring = AI.traceCells(g, W, H); if (!ring || ring.length < 4) return null;
     let best = ring; for (const e of [1.6, 2.5, 3.5, 5]) { const q = AI.dpRing(best === ring ? ring : ring, e); if (q.length >= 4) best = q; if (best.length <= 12) break; }
-    return { shape: 'outline', fill: +fill.toFixed(2), poly: best.map(([u, v]) => back(u + r.u0 - 3, v + r.v0 - 3)) };
+    const [px0, py0] = px[0], ui = Math.round(px0 * r.ux + py0 * r.uy - r.u0 + 3), vi = Math.round(-px0 * r.uy + py0 * r.ux - r.v0 + 3), mc = back(ui + 0.5 + r.u0 - 3, vi + 0.5 + r.v0 - 3), sx = px0 + 0.5 - mc[0], sy = py0 + 0.5 - mc[1];
+    return { shape: 'outline', fill: +fill.toFixed(2), poly: best.map(([u, v]) => { const q = back(u + r.u0 - 3, v + r.v0 - 3); return [q[0] + sx, q[1] + sy]; }) };
   };
   AI.valid = (s, npx) => { if (!s || !s.poly || s.poly.length < 4 || !s.poly.every(p => isFinite(p[0]) && isFinite(p[1]))) return false; const a = AI.polyArea(s.poly); return a >= 0.6 * npx && a <= 1.8 * npx; };
 
