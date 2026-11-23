@@ -344,10 +344,41 @@
     return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly } : null;
   };
 
+
+  /* rectilinear / no-acute-angle outline (round 7b) */
+  const angOK = (poly, minDeg) => { const n = poly.length; let sign = 0; for (let i = 0; i < n; i++) { const a = poly[(i + n - 1) % n], b = poly[i], c = poly[(i + 1) % n]; const v1 = [a[0] - b[0], a[1] - b[1]], v2 = [c[0] - b[0], c[1] - b[1]]; const cr = v1[0] * v2[1] - v1[1] * v2[0]; const ang = Math.abs(Math.atan2(cr, v1[0] * v2[0] + v1[1] * v2[1])) * 180 / Math.PI; if (ang < minDeg) return false; } return true; };
+  AI.angOK = angOK;
+  AI.rectShape = (px, o) => {
+    o = Object.assign({ maxV: 12, minDeg: 85 }, o || {});
+    const h = AI.hull(px); if (h.length < 3) return null; const r = AI.minRect(h); if (!r) return null;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of px) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const pad = 4, W = x1 - x0 + 1 + 2 * pad, H = y1 - y0 + 1 + 2 * pad, M = new Uint8Array(W * H); for (const [x, y] of px) M[(y - y0 + pad) * W + (x - x0 + pad)] = 1;
+    const iou = poly => { const R = rasterPoly(poly.map(([x, y]) => [x - x0 + pad, y - y0 + pad]), W, H); let i = 0, u = 0; for (let k = 0; k < M.length; k++) { if (M[k] && R[k]) i++; if (M[k] || R[k]) u++; } return u ? i / u : 0; };
+    const back = (u, v) => [u * r.ux - v * r.uy, u * r.uy + v * r.ux];
+    const cands = [{ kind: 'rectangle', poly: [back(r.u0, r.v0), back(r.u1 + 1, r.v0), back(r.u1 + 1, r.v1 + 1), back(r.u0, r.v1 + 1)] }];
+    // rectilinear in the lot frame at coarse block sizes
+    const U = px.map(([x, y]) => [x * r.ux + y * r.uy - r.u0, -x * r.uy + y * r.ux - r.v0]);
+    const Lu = r.u1 - r.u0 + 1, Lv = r.v1 - r.v0 + 1;
+    for (const b of [3, 4, 6, 8, 11, 15]) {
+      const gw = Math.ceil(Lu / b) + 2, gh = Math.ceil(Lv / b) + 2, cnt = new Float32Array(gw * gh);
+      for (const [u, v] of U) { const i = Math.floor(u / b) + 1, j = Math.floor(v / b) + 1; if (i >= 0 && j >= 0 && i < gw && j < gh) cnt[j * gw + i]++; }
+      const g = new Uint8Array(gw * gh); for (let k = 0; k < g.length; k++) g[k] = cnt[k] >= 0.5 * b * b ? 1 : 0;
+      const ring = AI.traceCells(g, gw, gh); if (!ring || ring.length < 4) continue;
+      const poly = ring.map(([i, j]) => back((i - 1) * b + r.u0, (j - 1) * b + r.v0));
+      if (poly.length <= o.maxV) { cands.push({ kind: 'rectilinear', poly }); }
+      if (poly.length <= 6) break;
+    }
+    // simplified hull, only if no acute corner
+    const hc = h.map(([x, y]) => [x + 0.5, y + 0.5]); for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q }); break; } }
+    let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.008 * c.poly.length; if (!best || c.score > best.score) best = c; }
+    // pixel-space orientation offset fix (pixels are indices; shift by half a pixel)
+    return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly.map(([x, y]) => [x + 0.5, y + 0.5]) } : null;
+  };
+
   /* ---------- city-wide inference ---------- */
   AI.inferMosaic = async (id, model, o) => {
-    o = Object.assign({ thr: 0.6, minM2: 2000, minProb: 0.8, maxOsm: 0.3, maxBld: 0.15, maxLu: 2, maxGreen: 2, snap: false, ndvi: 0, lo: 0, simple: 0, keepAi: false, cap: 0, round: 4 }, o || {});
-    const d = await AI.city(id); const tiles = await AI.tilesFor(id); let bld = []; try { bld = await AI.buildings(id); } catch (e) {}
+    o = Object.assign({ thr: 0.6, minM2: 2000, minProb: 0.8, maxOsm: 0.3, maxBld: 0.15, maxLu: 2, maxGreen: 2, snap: false, ndvi: 0, lo: 0, simple: 0, keepAi: false, cap: 0, rect: false, tiles: null, round: 4 }, o || {});
+    const d = await AI.city(id); const tiles = o.tiles || await AI.tilesFor(id); let bld = []; try { bld = await AI.buildings(id); } catch (e) {}
     const xs = tiles.map(t => t[0]), ys = tiles.map(t => t[1]); const x0 = Math.min(...xs), y0 = Math.min(...ys), W = (Math.max(...xs) - x0 + 1) * IN, H = (Math.max(...ys) - y0 + 1) * IN;
     const prob = new Uint8Array(W * H); const imgs = await pool(tiles, 8, t => AI.image(t[0], t[1]));
     tiles.forEach(([x, y], k) => { const img = imgs[k]; if (!img) return; const p = AI.predictTile(model, img), ox = (x - x0) * IN, oy = (y - y0) * IN; for (let r = 0; r < IN; r++) for (let c = 0; c < IN; c++) prob[(oy + r) * W + ox + c] = Math.round(p[r * IN + c] * 255); });
@@ -375,7 +406,7 @@
       let osm = 0, rv = 0, rf = 0, lf = 0, gf = 0, ps = 0; for (const q of comp) { if (greenD && greenD[q * 4 + 3] > 127) gf++; if (known[q * 4 + 3] > 127) osm++; if (rev[q * 4 + 3] > 127) rv++; if (bd[q * 4 + 3] > 127) rf++; if (lu && lu[q * 4 + 3] > 127) lf++; ps += prob[q]; }
       const n = comp.length, mp = ps / n / 255;
       if (osm / n > o.maxOsm) { why.osm++; continue; } if (rv / n > 0.3) { why.rev++; continue; } if (mp < o.minProb) { why.prob++; continue; } if (rf / n > o.maxBld) { why.roof++; continue; } if (lf / n > o.maxLu) { why.landuse++; continue; } if (gf / n > o.maxGreen) { why.green = (why.green || 0) + 1; continue; }
-      const pts = comp.map(q => [q % W, (q / W) | 0]); const s = o.simple ? AI.simpleShape(pts, o.simple) : AI.shapeOf(pts); if (!s || !(o.simple ? s.iou >= 0.6 && s.poly.length >= 3 : AI.valid(s, n))) { why.shape++; continue; }
+      const pts = comp.map(q => [q % W, (q / W) | 0]); const s = o.rect ? AI.rectShape(pts) : o.simple ? AI.simpleShape(pts, o.simple) : AI.shapeOf(pts); if (!s || !((o.simple || o.rect) ? s.iou >= 0.6 && s.poly.length >= 3 : AI.valid(s, n))) { why.shape++; continue; }
       const poly = s.poly.map(([px, py]) => [+x2lon(x0 + px / IN, Z).toFixed(6), +y2lat(y0 + py / IN, Z).toFixed(6)]); let sx = 0, sy = 0; for (const [px, py] of pts) { sx += px; sy += py; }
       dets.push({ id: id + '-r' + o.round + '-' + comp[0], city: id, cityName: d.name, lon: +x2lon(x0 + sx / n / IN, Z).toFixed(6), lat: +y2lat(y0 + sy / n / IN, Z).toFixed(6), acres: +(AI.polyArea(s.poly) * pxm * pxm / 4046.856).toFixed(3), prob: +mp.toFixed(3), roof: +(rf / n).toFixed(3), landuse: +(lf / n).toFixed(3), shape: s.shape, corners: s.poly.length, fill: s.fill, fitIoU: s.iou, poly }); }
     AI.why = AI.why || {}; for (const k in why) AI.why[k] = (AI.why[k] || 0) + why[k];
