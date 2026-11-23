@@ -28,7 +28,14 @@ public class SiteBuilder {
         if (from.find() && !from.group(1).equals(dataDate)) {
             dataDate = from.group(1) + " to " + dataDate;
         }
+        // content hash of app.js, so browsers fetch the new script after every change
+        String appVersion;
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(Paths.get("java", "template", "app.js")));
+            StringBuilder hx = new StringBuilder(); for (int i = 0; i < 5; i++) { hx.append(String.format("%02x", d[i])); } appVersion = hx.toString();
+        } catch (java.security.NoSuchAlgorithmException e) { appVersion = LocalDate.now().toString(); }
         String html = Files.readString(template, StandardCharsets.UTF_8)
+            .replace("{{APP_VERSION}}", appVersion)
             .replace("{{BUILD_DATE}}", LocalDate.now().toString())
             .replace("{{DATA_DATE}}", dataDate);
         Files.writeString(out, html, StandardCharsets.UTF_8);
