@@ -60,13 +60,14 @@
       <p class="meta" id="meta"></p>
       <p class="q">Is the outlined area a <b>surface parking lot</b>?</p>
       <div class="btns">
-        <button class="b yes" data-a="yes">Yes <kbd>Y</kbd></button>
+        <button class="b yes" data-a="yes">Yes, outline fits <kbd>Y</kbd></button>
+        <button class="b yes" data-a="rough" style="opacity:.8">Yes, outline off <kbd>O</kbd></button>
         <button class="b no" data-a="no">No <kbd>N</kbd></button>
         <button class="b uns" data-a="unsure">Not sure <kbd>U</kbd></button>
       </div>
       <div class="row"><button class="ghost" id="back">Back (B)</button><button class="ghost" id="toggle">Hide outline (H)</button></div>
       <div class="row"><button class="ghost" id="dl">Download results</button></div>
-      <p class="help">Answer "Yes" if most of the outlined area is open-air parking (painted stalls, cars, asphalt next to a building). "No" for roofs, roads, rail yards, plazas, water or shadows. Your answers are saved in this browser; download them when you finish.</p>
+      <p class="help">Answer "Yes, outline fits" if the outline follows the lot's edges, "Yes, outline off" if it is a lot but the outline is clearly wrong; "Yes" means most of the outlined area is open-air parking (painted stalls, cars, asphalt next to a building). "No" for roofs, roads, rail yards, plazas, water or shadows. Your answers are saved in this browser; download them when you finish.</p>
     </aside>
   </main>
   <footer>Imagery: USDA NAIP via Microsoft Planetary Computer · Model predictions are unverified until reviewed.</footer>
@@ -138,8 +139,8 @@
   function render() {
     var n = set.detections.length, done = Object.keys(answers).length;
     $('bar').style.width = (done / n * 100) + '%';
-    var y = 0, no = 0, u = 0; Object.keys(answers).forEach(function (k) { var v = answers[k]; if (v === 'yes') { y++; } else if (v === 'no') { no++; } else { u++; } });
-    $('counts').textContent = done + ' / ' + n + ' reviewed · ' + y + ' yes · ' + no + ' no · ' + u + ' unsure';
+    var y = 0, no = 0, u = 0, ro = 0; Object.keys(answers).forEach(function (k) { var v = answers[k]; if (v === 'yes') { y++; } else if (v === 'rough') { ro++; } else if (v === 'no') { no++; } else { u++; } });
+    $('counts').textContent = done + ' / ' + n + ' reviewed · ' + y + ' yes · ' + ro + ' outline off · ' + no + ' no · ' + u + ' unsure';
     if (i >= n) { finish(); return; }
     var d = set.detections[i];
     $('idx').textContent = 'Detection ' + (i + 1) + ' of ' + n + (answers[d.id] ? ' · answered: ' + answers[d.id] : '');
@@ -147,7 +148,7 @@
     $('meta').innerHTML = 'About ' + d.acres.toFixed(2) + ' acres · model confidence ' + Math.round(d.prob * 100) + '%' + (d.shape ? ' · ' + d.shape : '') + '<br>Not in OpenStreetMap · <a style="color:inherit" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + d.lat + '&mlon=' + d.lon + '#map=19/' + d.lat + '/' + d.lon + '">open location</a>';
     draw();
   }
-  function stamp(a) { var s = $('stamp'); s.textContent = a === 'yes' ? 'Yes' : a === 'no' ? 'No' : 'Not sure'; s.style.background = a === 'yes' ? 'rgba(127,209,161,.35)' : a === 'no' ? 'rgba(239,143,143,.35)' : 'rgba(255,255,255,.2)'; s.classList.add('show'); setTimeout(function () { s.classList.remove('show'); }, 380); }
+  function stamp(a) { var s = $('stamp'); s.textContent = a === 'yes' ? 'Yes' : a === 'rough' ? 'Outline off' : a === 'no' ? 'No' : 'Not sure'; s.style.background = (a === 'yes' || a === 'rough') ? 'rgba(127,209,161,.35)' : a === 'no' ? 'rgba(239,143,143,.35)' : 'rgba(255,255,255,.2)'; s.classList.add('show'); setTimeout(function () { s.classList.remove('show'); }, 380); }
   function answer(a) { var d = set.detections[i]; if (!d) { return; } answers[d.id] = a; save(); stamp(a); i++; while (i < set.detections.length && answers[set.detections[i].id]) { i++; } setTimeout(render, 120); }
   function finish() {
     $('main').innerHTML = '<div class="done" style="grid-column:1/-1"><h2>All detections reviewed</h2><p>Thank you. Download the results and put the file in your downtown-parking-footprint folder.</p><button class="primary" id="dl2">Download results</button></div>';
@@ -164,7 +165,7 @@
   $('dl').onclick = download;
   document.addEventListener('keydown', function (e) {
     var k = e.key.toLowerCase();
-    if (k === 'y' || k === 'arrowright') { answer('yes'); } else if (k === 'n' || k === 'arrowleft') { answer('no'); } else if (k === 'u') { answer('unsure'); }
+    if (k === 'y' || k === 'arrowright') { answer('yes'); } else if (k === 'n' || k === 'arrowleft') { answer('no'); } else if (k === 'u') { answer('unsure'); } else if (k === 'o') { answer('rough'); }
     else if (k === 'b' || k === 'backspace') { if (i > 0) { i--; render(); } } else if (k === 'h') { $('toggle').click(); }
   });
 
