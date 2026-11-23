@@ -377,7 +377,8 @@
             const q = cur.slice(0, k).concat([P, Q], cur.slice(k + 1)); const v = iou(q); if (!best || v > best.v) best = { q, v }; } } }
         if (!best || best.v < curI + 0.02) break; cur = best.q; curI = best.v; used++; }
       return cur; };
-    for (const c of cands.slice()) cands.push({ kind: c.kind === 'rectangle' ? 'rectangle+cut' : 'rectilinear+cut', poly: chamfer(c.poly), cut: true });
+    const top = cands.map(c => ({ c, sc: iou(c.poly) - 0.006 * c.poly.length })).sort((a, b) => b.sc - a.sc).slice(0, 2);
+    for (const { c } of top) cands.push({ kind: c.kind === 'rectangle' ? 'rectangle+cut' : 'rectilinear+cut', poly: chamfer(c.poly), cut: true });
     // simplified hull, only if no acute corner
     const hc = h; for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q, hullPen: 0.06 }); break; } }
     let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.006 * c.poly.length - (c.hullPen || 0); if (!best || c.score > best.score) best = c; }
