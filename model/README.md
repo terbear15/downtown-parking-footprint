@@ -65,3 +65,14 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 - Retrained from round-4 weights on rounds 1-4 answers; OSM industrial/railway land (OpenFreeMap) as weight-2 negatives; 62 round-4 answers held back.
 - Best epoch 2: held-back round-4 precision 0.897 (round-4 model on the same items: 0.826).
 - Detection also drops candidates >50% on industrial/railway land. 51 new detections (most high-confidence lots are already confirmed or reviewed).
+
+
+## Round 6 (2026-11-23)
+- Round 5 review: 39 yes / 12 no (0.76). Feedback: outlines often inaccurate; bare land and highways mistaken for lots.
+- Boundary-weighted loss (pixels within 2 px of a true lot edge x3); OSM streets (class widths) x3, parks/landcover x2, industrial/railway x2, buildings x3 as negatives.
+- Outline snapping: predicted area cut back where it overlaps streets or building footprints, then traced.
+- Pixel accuracy on 140 held-out city tiles (OSM lots as truth), threshold 0.5:
+  round-5 model raw {'iou': 0.326, 'precision': 0.675, 'recall': 0.386}, snapped {'iou': 0.34, 'precision': 0.747, 'recall': 0.384};
+  round-6 model raw {'iou': 0.326, 'precision': 0.649, 'recall': 0.396}, snapped {'iou': 0.342, 'precision': 0.726, 'recall': 0.392}.
+  Snapping is what improves boundaries; the retrained weights alone are about level.
+- Review adds "Yes, outline off" to measure outline quality directly. 74 new detections.

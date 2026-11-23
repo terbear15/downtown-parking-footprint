@@ -169,7 +169,7 @@
     else if (k === 'b' || k === 'backspace') { if (i > 0) { i--; render(); } } else if (k === 'h') { $('toggle').click(); }
   });
 
-  fetch(({r1:'review.json',r2:'review_r2.json',r3:'review_r3.json',r4:'review_r4.json'})[new URLSearchParams(location.search).get('set')] || 'review_r5.json').then(function (r) { return r.json(); }).then(function (j) {
+  fetch(({r1:'review.json',r2:'review_r2.json',r3:'review_r3.json',r4:'review_r4.json',r5:'review_r5.json'})[new URLSearchParams(location.search).get('set')] || 'review_r6.json').then(function (r) { return r.json(); }).then(function (j) {
     set = j; KEY = 'dpf-review-' + set.version;
     try { answers = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { answers = {}; }
     $('rnd').textContent = '· Round ' + (set.round || 1) + ' · Downtown Parking Footprint';
