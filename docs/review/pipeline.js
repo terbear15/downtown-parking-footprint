@@ -66,6 +66,10 @@
     throw new Error('overpass failed ' + id);
   };
 
+  /* buildings touching a z17 tile, via a tile-bucket index */
+  const bIdx = {};
+  AI.bldTile = (id, tx, ty) => { const b = bldCache[id]; if (!b) return []; if (!bIdx[id]) { const m = new Map(); b.forEach((r, k) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [lo, la] of r) { const x = lon2x(lo, Z), y = lat2y(la, Z); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } for (let X = Math.floor(x0); X <= Math.floor(x1); X++) for (let Y = Math.floor(y0); Y <= Math.floor(y1); Y++) { const key = X + ',' + Y; if (!m.has(key)) m.set(key, []); m.get(key).push(r); } }); bIdx[id] = m; } return bIdx[id].get(tx + ',' + ty) || []; };
+
   /* paint lon/lat rings into a canvas whose origin is tile (x0,y0) at IN px per tile */
   AI.paint = (g, rings, x0, y0) => { g.beginPath(); for (const ring of rings) { ring.forEach((p, i) => { const px = (lon2x(p[0], Z) - x0) * IN, py = (lat2y(p[1], Z) - y0) * IN; i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.closePath(); } g.fill('evenodd'); };
   AI.rasterRings = (rings, tx, ty) => { const c = new OffscreenCanvas(IN, IN), g = c.getContext('2d'); g.fillStyle = '#fff'; AI.paint(g, rings, tx, ty); const d = g.getImageData(0, 0, IN, IN).data, m = new Uint8Array(IN * IN); for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3] > 127 ? 1 : 0; return m; };
@@ -114,7 +118,7 @@
       jobs.forEach(([t, kind, its], k) => {
         const img = imgs[k]; if (!img) return; const [tx, ty] = t;
         const c = new OffscreenCanvas(IN, IN), g = c.getContext('2d');
-        g.fillStyle = '#00f'; for (const b of bld) AI.paint(g, [b], tx, ty); for (const s of strRings) AI.paint(g, s, tx, ty);
+        g.fillStyle = '#00f'; for (const b of AI.bldTile(id, tx, ty)) AI.paint(g, [b], tx, ty); for (const s of strRings) AI.paint(g, s, tx, ty);
         g.fillStyle = '#f00'; for (const l of lotRings) AI.paint(g, l, tx, ty);
         const px = g.getImageData(0, 0, IN, IN).data, Y = new Uint8Array(IN * IN), W = new Float32Array(IN * IN).fill(1);
         for (let i = 0; i < IN * IN; i++) { if (px[i * 4] > 127) Y[i] = 1; else if (px[i * 4 + 2] > 127) W[i] = o.bldW; }
