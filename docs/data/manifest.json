@@ -1,5 +1,5 @@
 {
- "built": "2026-11-22",
+ "built": "2026-11-23",
  "thresholds": {
   "minAcres": 1.5,
   "coreMaxMi": 0.5,
@@ -18,8 +18,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/atlanta.json": {
-   "sha256": "b3b85112ffd95e92d612a640e59459da5d8a799a51b373574c5bc7e3606bc6e6",
-   "bytes": 152794,
+   "sha256": "a1e24495cfaec742c7e025a0fdee0ed2d5322d204de0cdcaf098fd6d0cf8a320",
+   "bytes": 153052,
    "lots": 359,
    "parkingAcres": 147.9,
    "share": 0.0588,
@@ -54,8 +54,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/boston.json": {
-   "sha256": "c6ed2c549effb2c27327ccbaa962167798da2233c221ef5dc6d28271e71cb3fa",
-   "bytes": 201792,
+   "sha256": "15cc76f6706266acad83c083a11c9c43e6af5cf06250ab9c2db955d8e247e724",
+   "bytes": 202456,
    "lots": 577,
    "parkingAcres": 230.8,
    "share": 0.0452,
@@ -72,8 +72,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/charlotte.json": {
-   "sha256": "cf48b1cd387e991e356444daef879fd8928c5d7dd6db5678b2367fe27a5876ec",
-   "bytes": 119400,
+   "sha256": "23d4aac80e5c4d975418b85163735305d4c1253a4105e6510e346e8707ec4db2",
+   "bytes": 119551,
    "lots": 321,
    "parkingAcres": 139.2,
    "share": 0.106,
@@ -81,8 +81,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/chicago.json": {
-   "sha256": "d7d66bf49d65e94bff5443d7e24d3b5b16fd379f50f65695373f99fdf797f673",
-   "bytes": 206859,
+   "sha256": "82be602e872fb3e7a43043ce5f359f5dfd15b40fc615217aa5bb621fcd3924f6",
+   "bytes": 207192,
    "lots": 595,
    "parkingAcres": 233.5,
    "share": 0.0571,
@@ -117,8 +117,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/dallas.json": {
-   "sha256": "459ef752e7cd9358e2a5812852f496b3bcc256bce7408f3e9e58abd376819aff",
-   "bytes": 91093,
+   "sha256": "3f857a539be1ab01b52dcc13262c015cb44aeabaca2e1e0ccb6c30226382d366",
+   "bytes": 91230,
    "lots": 253,
    "parkingAcres": 159.4,
    "share": 0.0776,
@@ -171,8 +171,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/indianapolis.json": {
-   "sha256": "6250fdbcf9949803e1515f4ea0ad0ecc09b307aae8febf177aeab6c9eb877a50",
-   "bytes": 93321,
+   "sha256": "32a8a2a7fdbaa504abe7fe14e1ab326a104e724b0905001a0a7676101bbcc069",
+   "bytes": 93712,
    "lots": 281,
    "parkingAcres": 159.0,
    "share": 0.1492,
@@ -189,8 +189,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/kansascity.json": {
-   "sha256": "82f3abfc535bb3c5796375a32a4bf7e2e6803ec4112afababc54435f61e8d0ec",
-   "bytes": 135615,
+   "sha256": "1869aa79fb6dcaa8b42ade4ede5211cedd3643eb7fcbd8f8a3b5758a7898adfa",
+   "bytes": 135923,
    "lots": 346,
    "parkingAcres": 125.8,
    "share": 0.1336,
@@ -207,8 +207,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/losangeles.json": {
-   "sha256": "de3cc9705f80d5810eb6b1b2f3d26855a14e77ce209973c734b685fe42176ec0",
-   "bytes": 135366,
+   "sha256": "5e51e078301145451e11824b5499794fd68c3c2a83f97977c0773472eba465da",
+   "bytes": 135831,
    "lots": 384,
    "parkingAcres": 177.0,
    "share": 0.0721,
@@ -216,8 +216,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/louisville.json": {
-   "sha256": "760fc37135d94b791e4d992bdab2af0bbf4a0a858bbf9dd424ca91230681f2dc",
-   "bytes": 66796,
+   "sha256": "36a15bc7c6a159d026eacf2d8f004fd09b7ef1c78a12655c14140ebe7951218a",
+   "bytes": 67113,
    "lots": 212,
    "parkingAcres": 93.9,
    "share": 0.124,
@@ -261,8 +261,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/nashville.json": {
-   "sha256": "076e8235cefd8ff3848fe5fb090537177a59d49647ce777610b307bc2cb5c42d",
-   "bytes": 130771,
+   "sha256": "3ade61e620a99a42c2fd4cbc682a8740436ac79116e626cf1ea8ef82de3ea4c1",
+   "bytes": 130932,
    "lots": 399,
    "parkingAcres": 198.3,
    "share": 0.0937,
@@ -279,8 +279,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/newyork.json": {
-   "sha256": "45e57461e691742eb7c87120974e0cfd0f622d64e06740f3ba1a550a35aa7f86",
-   "bytes": 151086,
+   "sha256": "93846fb8fdaf091cec102875f6458a20745a02a217b707678a8c4ddc4cd10661",
+   "bytes": 151265,
    "lots": 437,
    "parkingAcres": 150.8,
    "share": 0.0092,
@@ -288,8 +288,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/oklahomacity.json": {
-   "sha256": "514d1c092adba60cc1c6bece074e2a736fbde4adfcb3cd3dcaf02e0e7451bcfb",
-   "bytes": 75708,
+   "sha256": "9a1408a2d5a7216a0f9bdaecd42523824369e8027493fd6c048354b1036940ff",
+   "bytes": 76139,
    "lots": 229,
    "parkingAcres": 86.7,
    "share": 0.1059,
@@ -297,8 +297,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/omaha.json": {
-   "sha256": "8ba9beca6ae45488cd9d46fded7a6bf5656d65868a48d368723f437325caf3fa",
-   "bytes": 37985,
+   "sha256": "ef25133daf761cc40219feee1ba5214d486e21a3282738578a7ae3b679451700",
+   "bytes": 38102,
    "lots": 107,
    "parkingAcres": 40.1,
    "share": 0.0865,
@@ -315,8 +315,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/philadelphia.json": {
-   "sha256": "6118fb76b1bfb71c69a410e4b9e2aa4adf0949b253af2f1b52257971a7ce5ce1",
-   "bytes": 108615,
+   "sha256": "7ec886de5521014f4e46d0d719d75005f6f84c9844cfad19a27354942525b73f",
+   "bytes": 108770,
    "lots": 321,
    "parkingAcres": 111.1,
    "share": 0.051,
@@ -333,8 +333,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/pittsburgh.json": {
-   "sha256": "bf7d3333417dbdbc9d61572f9d6c340ba36da7780fd92e55dcae77d56fd63d33",
-   "bytes": 46757,
+   "sha256": "1bea13a595ee8f232c70cb00d51cdf49ca709c60bc933626d55b58b91eafed20",
+   "bytes": 46907,
    "lots": 110,
    "parkingAcres": 60.9,
    "share": 0.073,
@@ -342,8 +342,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/portland.json": {
-   "sha256": "f45f6ec23f2b73f87e77c6491287de432fc980f074e935d0dfa2718cc3f4f576",
-   "bytes": 109547,
+   "sha256": "cc26f34b40eaef3ff60c2813da2968472b16930776cd700bfef55ac1b7a97fb4",
+   "bytes": 109818,
    "lots": 318,
    "parkingAcres": 77.3,
    "share": 0.0533,
@@ -387,8 +387,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/sanantonio.json": {
-   "sha256": "fdf5894d760fd9a9bbb10e1dcc5c64ab3008f143b2c354195cf6efed04d63371",
-   "bytes": 70964,
+   "sha256": "29c941a2d7c29da5a2d8058f615540a85c2509e5d2a5708a9319b5c384fdf20d",
+   "bytes": 71138,
    "lots": 225,
    "parkingAcres": 135.3,
    "share": 0.1168,
@@ -405,8 +405,8 @@
    "osmFetched": "2026-11-22"
   },
   "cities/sanfrancisco.json": {
-   "sha256": "4cdb6aef77320ab09fdc07024e57116f7db09197aee74d990be7ee0e1016f7df",
-   "bytes": 123911,
+   "sha256": "4b4135f8a570a25fd12befed5b6f01e86a64ca2d9f4fd68fc131297747662887",
+   "bytes": 124363,
    "lots": 370,
    "parkingAcres": 132.2,
    "share": 0.0333,
@@ -423,8 +423,8 @@
    "osmFetched": "2026-11-19"
   },
   "cities/stlouis.json": {
-   "sha256": "67ebd9dcbf24c454a1b3b0d44a922cfe8f0abd0deb7a217bff43f6c185bef2ce",
-   "bytes": 149365,
+   "sha256": "f505f2b90efe5004a5b4ac781566fb07b5d9c077f9fd63ba304dbd4eb17ffc8d",
+   "bytes": 149590,
    "lots": 373,
    "parkingAcres": 204.5,
    "share": 0.179,
@@ -459,12 +459,12 @@
    "osmFetched": "2026-11-19"
   },
   "summary.csv": {
-   "sha256": "88208eebfc247805a6c78297db0c16ee4aa4455f6c07a7c8e73d282c2c5446a6",
-   "bytes": 5059
+   "sha256": "fb2d1b5ed0bf67685b52d3aa084b3008b28c67bc2e5611f5c05734e3eaac07e0",
+   "bytes": 5060
   },
   "index.json": {
-   "sha256": "3ec528c9fc012355e40f6f4a0c09ecb1cc5e7f777f8c16392fcfc65a219c1458",
-   "bytes": 23214
+   "sha256": "05a2d0b833b2e8607c7134c9000c151079e49d49992d506ed841297485972837",
+   "bytes": 23215
   }
  }
 }
