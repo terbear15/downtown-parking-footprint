@@ -1,0 +1,183 @@
+{
+ "name": "U-Net, MobileNet v1 0.25 encoder, round 4 (retrained on rounds 1-3 answers + OSM building footprints as rooftop negatives)",
+ "bestEpoch": 2,
+ "heldOutCities": {
+  "iou": 0.353,
+  "precision": 0.613,
+  "recall": 0.454,
+  "roofFalsePositive": 0.0289
+ },
+ "heldBackRound3": {
+  "thr": 0.78,
+  "yesKept": 0.667,
+  "noKept": 0.227,
+  "precision": 0.762,
+  "n": 46
+ },
+ "round3ModelOnSameTest": {
+  "thr": 0.78,
+  "yesKept": 1,
+  "noKept": 0.955,
+  "yesN": 24,
+  "noN": 22,
+  "precision": 0.533
+ },
+ "history": [
+  {
+   "ep": 1,
+   "lr": 0.0001,
+   "loss": 0.7897,
+   "score": 0.631,
+   "iou": 0.342,
+   "precision": 0.652,
+   "recall": 0.418,
+   "roofFP": 0.0208,
+   "fbYes": 0.458,
+   "fbNo": 0.364,
+   "fbPrecision": 0.579
+  },
+  {
+   "ep": 2,
+   "lr": 8.96e-05,
+   "loss": 0.7779,
+   "score": 1.115,
+   "iou": 0.353,
+   "precision": 0.613,
+   "recall": 0.454,
+   "roofFP": 0.0289,
+   "fbYes": 0.667,
+   "fbNo": 0.227,
+   "fbPrecision": 0.762
+  },
+  {
+   "ep": 3,
+   "lr": 8.03e-05,
+   "loss": 0.7793,
+   "score": 0.634,
+   "iou": 0.334,
+   "precision": 0.667,
+   "recall": 0.4,
+   "roofFP": 0.0195,
+   "fbYes": 0.375,
+   "fbNo": 0.273,
+   "fbPrecision": 0.6
+  },
+  {
+   "ep": 4,
+   "lr": 7.2e-05,
+   "loss": 0.7625,
+   "score": 0.992,
+   "iou": 0.338,
+   "precision": 0.627,
+   "recall": 0.423,
+   "roofFP": 0.0264,
+   "fbYes": 0.708,
+   "fbNo": 0.409,
+   "fbPrecision": 0.654
+  },
+  {
+   "ep": 5,
+   "lr": 6.45e-05,
+   "loss": 0.7595,
+   "score": 1.055,
+   "iou": 0.347,
+   "precision": 0.628,
+   "recall": 0.437,
+   "roofFP": 0.0276,
+   "fbYes": 0.708,
+   "fbNo": 0.318,
+   "fbPrecision": 0.708
+  },
+  {
+   "ep": 6,
+   "lr": 5.79e-05,
+   "loss": 0.7442,
+   "score": 1.073,
+   "iou": 0.336,
+   "precision": 0.664,
+   "recall": 0.405,
+   "roofFP": 0.0196,
+   "fbYes": 0.583,
+   "fbNo": 0.227,
+   "fbPrecision": 0.737
+  },
+  {
+   "ep": 7,
+   "lr": 5.19e-05,
+   "loss": 0.76,
+   "score": 1.07,
+   "iou": 0.356,
+   "precision": 0.64,
+   "recall": 0.445,
+   "roofFP": 0.0258,
+   "fbYes": 0.625,
+   "fbNo": 0.273,
+   "fbPrecision": 0.714
+  },
+  {
+   "ep": 8,
+   "lr": 4.65e-05,
+   "loss": 0.7539,
+   "score": 1.037,
+   "iou": 0.337,
+   "precision": 0.656,
+   "recall": 0.409,
+   "roofFP": 0.021,
+   "fbYes": 0.583,
+   "fbNo": 0.273,
+   "fbPrecision": 0.7
+  },
+  {
+   "ep": 9,
+   "lr": 4.17e-05,
+   "loss": 0.757,
+   "score": 1.055,
+   "iou": 0.349,
+   "precision": 0.65,
+   "recall": 0.43,
+   "roofFP": 0.0215,
+   "fbYes": 0.5,
+   "fbNo": 0.227,
+   "fbPrecision": 0.706
+  },
+  {
+   "ep": 10,
+   "lr": 3.73e-05,
+   "loss": 0.7495,
+   "score": 1.096,
+   "iou": 0.355,
+   "precision": 0.607,
+   "recall": 0.461,
+   "roofFP": 0.0316,
+   "fbYes": 0.833,
+   "fbNo": 0.318,
+   "fbPrecision": 0.741
+  },
+  {
+   "ep": 11,
+   "lr": 3.35e-05,
+   "loss": 0.7478,
+   "score": 1.096,
+   "iou": 0.346,
+   "precision": 0.616,
+   "recall": 0.441,
+   "roofFP": 0.0281,
+   "fbYes": 0.625,
+   "fbNo": 0.227,
+   "fbPrecision": 0.75
+  },
+  {
+   "ep": 12,
+   "lr": 3e-05,
+   "loss": 0.7445,
+   "score": 1.078,
+   "iou": 0.341,
+   "precision": 0.652,
+   "recall": 0.417,
+   "roofFP": 0.0218,
+   "fbYes": 0.583,
+   "fbNo": 0.227,
+   "fbPrecision": 0.737
+  }
+ ]
+}

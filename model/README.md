@@ -50,3 +50,11 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 - Outlines: traced in each lot's own orientation with right angles and simplified to about 8-17 corners; rectangle only if >=86% filled. Every outline in review_r3.json was render-checked (0 failures).
 - Stricter detection: mean probability >= 0.78, area >= 2000 m2. 199 detections, 190 in the review set (<=25 per city, 36 cities).
 - Weights: model/round2/ and model/round3/.
+
+
+## Round 4 (2026-11-23)
+- Diagnostic: 49 of the 88 round-3 "no" answers lay >30% on OSM building footprints (rooftops).
+- Retrained from round-3 weights on rounds 1-3 answers; OSM building footprints (OpenFreeMap vector tiles) labelled as non-parking with weight 3; 46 round-3 answers held back.
+- Best epoch 2. Held-back round-3 answers at threshold 0.78: precision 0.762 (round-3 model on the same items: 0.533); yes kept 0.667, no kept 0.227.
+- Detection also drops candidates >30% on buildings. 250 detections in 47 cities, all outlines render-checked.
+- Pipeline code: docs/review/pipeline.js.
