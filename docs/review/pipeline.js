@@ -350,29 +350,29 @@
   AI.angOK = angOK;
   AI.rectShape = (px, o) => {
     o = Object.assign({ maxV: 12, minDeg: 85 }, o || {});
-    const h = AI.hull(px); if (h.length < 3) return null; const r = AI.minRect(h); if (!r) return null;
+    const pc = px.map(([x, y]) => [x + 0.5, y + 0.5]); const h = AI.hull(pc); if (h.length < 3) return null; const r = AI.minRect(h); if (!r) return null;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of px) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     const pad = 4, W = x1 - x0 + 1 + 2 * pad, H = y1 - y0 + 1 + 2 * pad, M = new Uint8Array(W * H); for (const [x, y] of px) M[(y - y0 + pad) * W + (x - x0 + pad)] = 1;
     const iou = poly => { const R = rasterPoly(poly.map(([x, y]) => [x - x0 + pad, y - y0 + pad]), W, H); let i = 0, u = 0; for (let k = 0; k < M.length; k++) { if (M[k] && R[k]) i++; if (M[k] || R[k]) u++; } return u ? i / u : 0; };
     const back = (u, v) => [u * r.ux - v * r.uy, u * r.uy + v * r.ux];
-    const cands = [{ kind: 'rectangle', poly: [back(r.u0, r.v0), back(r.u1 + 1, r.v0), back(r.u1 + 1, r.v1 + 1), back(r.u0, r.v1 + 1)] }];
+    const ua = r.u0 - 0.5, va = r.v0 - 0.5, ub = r.u1 + 0.5, vb = r.v1 + 0.5;
+    const cands = [{ kind: 'rectangle', poly: [back(ua, va), back(ub, va), back(ub, vb), back(ua, vb)] }];
     // rectilinear in the lot frame at coarse block sizes
-    const U = px.map(([x, y]) => [x * r.ux + y * r.uy - r.u0, -x * r.uy + y * r.ux - r.v0]);
+    const U = pc.map(([x, y]) => [x * r.ux + y * r.uy - ua, -x * r.uy + y * r.ux - va]);
     const Lu = r.u1 - r.u0 + 1, Lv = r.v1 - r.v0 + 1;
     for (const b of [3, 4, 6, 8, 11, 15]) {
       const gw = Math.ceil(Lu / b) + 2, gh = Math.ceil(Lv / b) + 2, cnt = new Float32Array(gw * gh);
       for (const [u, v] of U) { const i = Math.floor(u / b) + 1, j = Math.floor(v / b) + 1; if (i >= 0 && j >= 0 && i < gw && j < gh) cnt[j * gw + i]++; }
       const g = new Uint8Array(gw * gh); for (let k = 0; k < g.length; k++) g[k] = cnt[k] >= 0.5 * b * b ? 1 : 0;
       const ring = AI.traceCells(g, gw, gh); if (!ring || ring.length < 4) continue;
-      const poly = ring.map(([i, j]) => back((i - 1) * b + r.u0, (j - 1) * b + r.v0));
+      const poly = ring.map(([i, j]) => back((i - 1) * b + ua, (j - 1) * b + va));
       if (poly.length <= o.maxV) { cands.push({ kind: 'rectilinear', poly }); }
       if (poly.length <= 6) break;
     }
     // simplified hull, only if no acute corner
-    const hc = h.map(([x, y]) => [x + 0.5, y + 0.5]); for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q }); break; } }
+    const hc = h; for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q }); break; } }
     let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.008 * c.poly.length; if (!best || c.score > best.score) best = c; }
-    // pixel-space orientation offset fix (pixels are indices; shift by half a pixel)
-    return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly.map(([x, y]) => [x + 0.5, y + 0.5]) } : null;
+    return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly } : null;
   };
 
   /* ---------- city-wide inference ---------- */
