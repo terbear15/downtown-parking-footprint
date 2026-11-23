@@ -273,7 +273,7 @@
 
   /* ---------- morphology / geometry ---------- */
   AI.dil = (m, W, H, r) => { const t = new Uint8Array(W * H), o = new Uint8Array(W * H);
-    for (let y = 0; y < H; y++) { let run = 0; for (let x = 0; x < W; x++) { run = m[y * W + x] ? r * 2 + 1 : Math.max(0, run - 1); if (run) t[y * W + x] = 1; } run = 0; for (let x = W - 1; x >= 0; x--) { run = m[y * W + x] ? r + 1 : Math.max(0, run - 1); if (run) t[y * W + x] = 1; } }
+    for (let y = 0; y < H; y++) { let run = 0; for (let x = 0; x < W; x++) { run = m[y * W + x] ? r + 1 : Math.max(0, run - 1); if (run) t[y * W + x] = 1; } run = 0; for (let x = W - 1; x >= 0; x--) { run = m[y * W + x] ? r + 1 : Math.max(0, run - 1); if (run) t[y * W + x] = 1; } }
     for (let x = 0; x < W; x++) { let run = 0; for (let y = 0; y < H; y++) { run = t[y * W + x] ? r + 1 : Math.max(0, run - 1); if (run) o[y * W + x] = 1; } run = 0; for (let y = H - 1; y >= 0; y--) { run = t[y * W + x] ? r + 1 : Math.max(0, run - 1); if (run) o[y * W + x] = 1; } }
     return o; };
   AI.ero = (m, W, H, r) => { const inv = new Uint8Array(W * H); for (let i = 0; i < inv.length; i++) inv[i] = m[i] ? 0 : 1; const d = AI.dil(inv, W, H, r); for (let i = 0; i < d.length; i++) d[i] = d[i] ? 0 : 1; return d; };
