@@ -19,7 +19,7 @@
   AI.polyArea = p => { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return Math.abs(a) / 2; };
 
   /* ---------- data access ---------- */
-  const cityCache = {};
+  const cityCache = AI._city = AI._city || {};
   AI.city = async id => cityCache[id] || (cityCache[id] = await fetch(BASE + 'data/cities/' + id + '.json').then(r => r.json()));
   AI.index = null;
   AI.loadIndex = async () => AI.index = await fetch(BASE + 'data/index.json').then(r => r.json());
@@ -51,7 +51,7 @@
   };
 
   /* OSM building footprints (Overpass), rings in lon/lat */
-  const bldCache = {};
+  const bldCache = AI._bld = AI._bld || {};
   AI.buildings = async id => {
     if (bldCache[id]) return bldCache[id];
     const d = await AI.city(id), [[w, s], [e, n]] = d.bounds, m = 0.004;
