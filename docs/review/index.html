@@ -125,7 +125,7 @@
       if (d.poly) {
         g.beginPath();
         d.poly.forEach(function (p, k) { var px = (lon2x(p[0], v.z) - x0) * sc, py = (lat2y(p[1], v.z) - y0) * sc; if (k) { g.lineTo(px, py); } else { g.moveTo(px, py); } });
-        g.closePath(); g.fillStyle = 'rgba(233,165,119,0.22)'; g.fill(); g.strokeStyle = '#f3c4a2'; g.lineWidth = 3; g.lineJoin = 'round'; g.stroke();
+        g.closePath(); g.fillStyle = 'rgba(0,229,255,0.16)'; g.fill(); g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.lineWidth = 7; g.stroke(); g.strokeStyle = '#00e5ff'; g.lineWidth = 3; g.stroke();
       } else {
         var n = set.grid, m = decodeRLE(d.mask, n), c = sc / n, ox = (d.x - x0) * sc, oy = (d.y - y0) * sc;
         g.fillStyle = 'rgba(233,165,119,0.3)';
