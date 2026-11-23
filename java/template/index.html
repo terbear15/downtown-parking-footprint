@@ -356,9 +356,22 @@
     <ul>
       <li><b>Vector GIS:</b> polygon clipping, areas in a local projection, buffers and nearest-distance queries.</li>
       <li><b>Spatial aggregation:</b> block-level jobs gridded and smoothed to define every downtown with one rule.</li>
-      <li><b>Deep learning (U-Net):</b> a segmentation model with a pretrained MobileNet encoder, trained in the browser with TensorFlow.js on 897 NAIP aerial tiles (1.4 m pixels) from 16 cities, using the OSM lots as labels. Tested on four held-out cities (Denver, Kansas City, Philadelphia, Seattle): pixel IoU 0.32 against 0.08 for a simple asphalt-colour rule; it finds 54% of mapped lots over 0.25 acre and 70% of lots over 1 acre. After one round of human review (467 proposals, 43% confirmed), the model was retrained on the answers, raising the share of acceptable proposals to an estimated 67%. Confirmed lots are shown with dashed outlines and reported separately.</li>
+      <li><b>Deep learning (U-Net):</b> a segmentation model with a pretrained MobileNet encoder (0.86 M parameters), trained in the browser with TensorFlow.js on the GPU (WebGL) on NAIP aerial tiles, first with the OSM lots as labels, then over eight rounds of human review (table below). Each round the model proposed unmapped lots, a person marked them, and the answers became training data. Building footprints, streets, parks and industrial or rail land from OSM were added as negative examples, NAIP's near-infrared band removes trees, and outlines are fitted as right-angle shapes in each lot's own orientation. Only lots a person confirmed with a fitting outline are shown (dashed) and reported separately.</li>
       <li><b>Web mapping:</b> MapLibre GL vector tiles; data built by Python; page assembled by a Java build step.</li>
     </ul>
+    <h4>Human-in-the-loop review, 8 rounds</h4>
+    <table>
+      <tr><th>Round</th><th>Proposals</th><th>Real lots</th><th>Outline fits</th><th>Main change</th></tr>
+      <tr><td>1</td><td>467</td><td>43%</td><td>–</td><td>Model trained on OSM lots only</td></tr>
+      <tr><td>2</td><td>450</td><td>61%*</td><td>–</td><td>Retrained on round-1 answers</td></tr>
+      <tr><td>3</td><td>190</td><td>53%</td><td>–</td><td>Stricter confidence, oriented outlines</td></tr>
+      <tr><td>4</td><td>250</td><td>80%</td><td>–</td><td>Building footprints as negatives (rooftops)</td></tr>
+      <tr><td>5</td><td>51</td><td>76%</td><td>–</td><td>Industrial and rail land as negatives</td></tr>
+      <tr><td>6</td><td>74</td><td>87%</td><td>58%</td><td>Edge-weighted loss; outlines cut back at streets and buildings</td></tr>
+      <tr><td>7</td><td>300</td><td>94%</td><td>61%</td><td>Near-infrared tree removal; right-angle outlines</td></tr>
+      <tr><td>8</td><td>300</td><td>92%</td><td>60%†</td><td>Strict review; rectilinear 79%, rectangles 100%, diagonal cuts 38%</td></tr>
+    </table>
+    <p class="note">Real lots = share of answered proposals that were surface parking. Outline fits = share of real lots whose outline the reviewer accepted (asked from round 6). * visible outlines only. † strict standard; of 118 lots whose outline had been rejected before, 56 were accepted after re-fitting. The final model drops diagonal cuts and keeps rectangles and right-angle shapes.</p>
     <h4>Reproducibility</h4>
     <p><code>python/fetch_data.py</code> re-downloads LODES and OSM; <code>python/build_data.py</code> computes every figure and writes <code>data/manifest.json</code> (counts, totals and SHA-256 of each file). Build {{BUILD_DATE}}.</p>
   </div></section>

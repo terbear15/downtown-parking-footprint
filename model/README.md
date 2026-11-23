@@ -93,3 +93,8 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 - Outline: right-angle shape in the lot orientation (blocks 2-15 px) plus up to 2 diagonal corner cuts when IoU rises >= 0.02; hull polygons penalised.
 - Retrained 5 epochs with round-7 answers; held-back round-7 precision 0.964 (yes kept 0.931).
 - 300 review items: {'rough': 120, 'new': 94, 'yes': 86} (rough = lots you marked "outline off" before); shapes {'rectangle+cut': 111, 'polygon': 16, 'rectilinear': 125, 'rectilinear+cut': 40, 'rectangle': 8}.
+
+
+## Final (2026-11-23)
+- Round 8 strict review: 167 outline fits / 110 outline off / 23 no -> real lots 0.92, outline fit 0.60. By outline type: rectangle 1.00 (8), rectilinear 0.79, rectilinear+cut 0.57, rectangle+cut 0.38 -> final outlines use rectangles and right-angle shapes only.
+- Final retraining on round-8 answers did not beat the round-8 weights on 45 held-out strict answers (precision 0.944, yes kept 0.919), so `model/final/` = round-8 weights.

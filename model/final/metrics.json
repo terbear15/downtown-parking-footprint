@@ -1,0 +1,71 @@
+{
+ "name": "Downtown Parking Footprint - final parking-lot segmentation model",
+ "architecture": "U-Net, MobileNet v1 0.25 encoder, 224x224 RGB NAIP tiles at zoom 17 (~0.6 m/px), 861,633 parameters",
+ "framework": "TensorFlow.js 4.22 (load with tf.loadLayersModel('model.json'))",
+ "weights": "round 8 (trained on OSM lots + human review rounds 1-7)",
+ "selection": "A final retraining with the strict round-8 answers (6 epochs) did not beat these weights on the 45 held-out round-8 answers, so the round-8 weights were kept.",
+ "heldOutStrictRound8": {
+  "threshold": 0.75,
+  "yesKept": 0.919,
+  "noKept": 0.25,
+  "precision": 0.944,
+  "n": 45
+ },
+ "heldOutCityTiles": {
+  "pixelIoU": 0.334,
+  "pixelPrecision": 0.673,
+  "recall": 0.399,
+  "afterSnapping": {
+   "iou": 0.34,
+   "precision": 0.733
+  }
+ },
+ "humanReview": [
+  {
+   "round": 1,
+   "n": 467,
+   "realLots": 0.43
+  },
+  {
+   "round": 2,
+   "n": 450,
+   "realLots": 0.61
+  },
+  {
+   "round": 3,
+   "n": 190,
+   "realLots": 0.53
+  },
+  {
+   "round": 4,
+   "n": 250,
+   "realLots": 0.8
+  },
+  {
+   "round": 5,
+   "n": 51,
+   "realLots": 0.76
+  },
+  {
+   "round": 6,
+   "n": 74,
+   "realLots": 0.87,
+   "outlineFits": 0.58
+  },
+  {
+   "round": 7,
+   "n": 300,
+   "realLots": 0.94,
+   "outlineFits": 0.61
+  },
+  {
+   "round": 8,
+   "n": 300,
+   "realLots": 0.92,
+   "outlineFits": 0.6,
+   "strict": true
+  }
+ ],
+ "postProcessing": "docs/review/pipeline.js with AI.FINAL = true: seeds p>=0.6 grown to p>=0.35; NAIP NIR NDVI>0.12 removed; cut back at OSM streets (class widths) and building footprints; drop if >30% buildings, >50% industrial/rail, >40% parks/landcover, area <1500 m2 or mean p <0.7; outline = oriented rectangle or right-angle (rectilinear) polygon in the lot orientation, no diagonal cuts.",
+ "use": "Candidates are proposals; only human-confirmed lots are used in published figures."
+}
