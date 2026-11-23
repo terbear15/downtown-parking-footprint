@@ -380,7 +380,7 @@
     <button class="btn close" data-close>Close</button>
     <p class="eyebrow">Limitations</p><h3>What these numbers cannot tell you</h3>
     <ul>
-      <li><b>Lower bound.</b> Only lots mapped in OpenStreetMap are counted, and coverage differs by city (table below). A U-Net model on aerial imagery proposes unmapped lots; only lots a person has confirmed are shown (dashed), and they are reported as a separate figure.</li>
+      <li><b>Lower bound.</b> Only lots mapped in OpenStreetMap are counted, and coverage differs by city (table below). A U-Net model on aerial imagery proposes unmapped lots; lots a person confirmed are shown dashed and reported as a separate figure. Lots a reviewer confirmed but whose outline was marked inaccurate, and any unreviewed proposals of the final model, are shown only on request (dotted) and only widen an estimated range (unreviewed proposals counted at the 92% rate of real lots measured in the strictest review). They never enter the main figure. A final city-wide run of the model found no confident proposals beyond lots already mapped, confirmed or reviewed.</li>
       <li><b>Model limits.</b> The model learns from OSM, so its labels contain the same gaps; its held-out pixel IoU is 0.32 and it misses about half of small lots. Its output is a list of proposals, not a measurement.</li>
       <li><b>Denominator.</b> Downtown area includes streets, parks and some water at the edges, so the share is of all downtown land, not of buildable parcels.</li>
       <li><b>Boundary rule.</b> A different job-density threshold or cell size gives different boundaries. Manhattan is a special case.</li>
@@ -409,6 +409,6 @@
   </div></section>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="app.js?v=b648f157da"></script>
+  <script src="app.js?v=c00b3b0385"></script>
 </body>
 </html>

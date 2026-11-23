@@ -87,7 +87,7 @@
   var EMPTY = { type: 'FeatureCollection', features: [] };
   var LOT_OP = ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.46];
   map.on('load', function () {
-    ['cities', 'outline', 'lots', 'structures', 'core', 'heat', 'ai'].forEach(function (s) {
+    ['cities', 'outline', 'lots', 'structures', 'core', 'heat', 'ai', 'cand'].forEach(function (s) {
       var src = { type: 'geojson', data: EMPTY }; if (s === 'lots') { src.promoteId = 'id'; } map.addSource(s, src);
     });
     map.addLayer({ id: 'outline-fill', type: 'fill', source: 'outline', paint: { 'fill-color': '#f5f5f7', 'fill-opacity': 0.012 } });
@@ -98,6 +98,8 @@
         'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 12, 1, 13.6, 0] } });
     map.addLayer({ id: 'structures', type: 'fill', source: 'structures', minzoom: 12, paint: { 'fill-color': '#f5f5f7', 'fill-opacity': 0.1, 'fill-outline-color': 'rgba(245,245,247,0.25)' } });
     map.addLayer({ id: 'ai-fill', type: 'fill', source: 'ai', minzoom: 12, paint: { 'fill-color': '#e9a577', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.22] } });
+    map.addLayer({ id: 'cand-fill', type: 'fill', source: 'cand', minzoom: 12, layout: { visibility: 'none' }, paint: { 'fill-color': '#b8a6ff', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.16] } });
+    map.addLayer({ id: 'cand-line', type: 'line', source: 'cand', minzoom: 12, layout: { visibility: 'none' }, paint: { 'line-color': '#cfc3ff', 'line-width': 1.3, 'line-dasharray': [0.6, 1.6], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.9] } });
     map.addLayer({ id: 'ai-line', type: 'line', source: 'ai', minzoom: 12, paint: { 'line-color': '#f3c4a2', 'line-width': 1.4, 'line-dasharray': [2, 1.5], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.9] } });
     map.addLayer({ id: 'lots-fill', type: 'fill', source: 'lots', minzoom: 12, paint: { 'fill-color': '#e9a577', 'fill-opacity': LOT_OP, 'fill-opacity-transition': { duration: 350 } } });
     map.addLayer({ id: 'lots-line', type: 'line', source: 'lots', minzoom: 12, paint: { 'line-color': '#f3c4a2', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.6], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 17, 1.1] } });
@@ -131,6 +133,8 @@
     map.on('mouseleave', 'lots-fill', function () { map.getCanvas().style.cursor = ''; if (hovered) { map.setFeatureState({ source: 'lots', id: hovered }, { hover: false }); hovered = null; } tip(); });
     map.on('mousemove', 'core', function (e) { var d = S.data[S.active]; tip(e.point, '<b>Downtown core</b><br>' + (d && d.coreJobsPerAcre ? 'Densest jobs: about ' + fmt(d.coreJobsPerAcre) + ' jobs per acre' : 'Set at Grand Central (Manhattan special case)')); });
     map.on('mouseleave', 'core', function () { tip(); });
+    map.on('mousemove', 'cand-fill', function (e) { var p = e.features[0].properties; tip(e.point, p.kind === 'rough' ? '<b>Confirmed lot, approximate outline</b><br>' + fmt(p.acres, 2) + ' acres · a reviewer confirmed the parking; the outline is not exact' : '<b>AI proposal, not reviewed</b><br>' + fmt(p.acres, 2) + ' acres · model confidence ' + Math.round(p.prob * 100) + '%'); });
+    map.on('mouseleave', 'cand-fill', function () { tip(); });
     map.on('mousemove', 'ai-fill', function (e) { var p = e.features[0].properties; tip(e.point, '<b>Found by the AI model</b><br>' + fmt(p.acres, 2) + ' acres · confirmed by a reviewer · not in OpenStreetMap'); });
     map.on('mouseleave', 'ai-fill', function () { tip(); });
     map.on('mousemove', 'structures', function (e) { var p = e.features[0].properties; tip(e.point, '<b>' + esc(p.name || 'Parking structure') + '</b><br>' + (p.kind === 'rooftop' ? 'Rooftop' : 'Multi-storey') + ' · not counted as surface'); });
@@ -227,6 +231,7 @@
       d.lots.forEach(function (l) { if (l.acresInside == null) { l.acresInside = l.acres; } d.lotById[l.id] = l; });
       d.geo = { type: 'FeatureCollection', features: d.lots.map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { id: l.id, acres: l.acres } }; }) };
       d.heat = { type: 'FeatureCollection', features: d.lots.map(function (l) { return { type: 'Feature', geometry: { type: 'Point', coordinates: l.center }, properties: { acres: l.acres } }; }) };
+      d.candGeo = { type: 'FeatureCollection', features: (d.candLots || []).map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { acres: l.acres, prob: l.prob, kind: l.kind } }; }) };
       d.aiGeo = { type: 'FeatureCollection', features: (d.aiLots || []).map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { acres: l.acres } }; }) };
       d.structGeo = { type: 'FeatureCollection', features: (d.structures || []).map(function (l) { return { type: 'Feature', geometry: polyOf(l), properties: { name: l.name || '', kind: l.kind } }; }) };
       d.outlineGeo = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: d.outline.map(decodeRing) } };
@@ -447,7 +452,7 @@
   }
   function overview() {
     S.active = null; markCard(null); closeLot(); writeHash();
-    if (S.mapReady) { ['outline', 'lots', 'core', 'heat', 'structures', 'ai'].forEach(function (s) { map.getSource(s).setData(EMPTY); }); overviewCamera(FLY_MS); }
+    if (S.mapReady) { ['outline', 'lots', 'core', 'heat', 'structures', 'ai', 'cand'].forEach(function (s) { map.getSource(s).setData(EMPTY); }); overviewCamera(FLY_MS); }
     if (S.cities.length) { renderOverview(); }
     setDrawer('half');
   }
@@ -484,7 +489,7 @@
     map.getSource('lots').setData(d.geo);
     map.getSource('heat').setData(d.heat);
     map.getSource('structures').setData(d.structGeo);
-    map.getSource('ai').setData(d.aiGeo);
+    map.getSource('ai').setData(d.aiGeo); map.getSource('cand').setData(d.candGeo);
     map.getSource('core').setData({ type: 'Feature', geometry: { type: 'Point', coordinates: d.core }, properties: {} });
     if (jump) { var cam = map.cameraForBounds(d.bounds, { padding: padFor('city') }); if (cam) { map.jumpTo({ center: cam.center, zoom: Math.min(cam.zoom, 15.5) }); } }
     applyMode();
@@ -510,8 +515,10 @@
       map.setLayoutProperty('heat', 'visibility', 'visible');
       map.setLayoutProperty('structures', 'visibility', 'visible');
       map.setLayoutProperty('ai-fill', 'visibility', 'visible'); map.setLayoutProperty('ai-line', 'visibility', 'visible');
+      map.setLayoutProperty('cand-fill', 'visibility', S.showCand ? 'visible' : 'none'); map.setLayoutProperty('cand-line', 'visibility', S.showCand ? 'visible' : 'none');
     } else {
       map.setLayoutProperty('ai-fill', 'visibility', 'none'); map.setLayoutProperty('ai-line', 'visibility', 'none');
+      map.setLayoutProperty('cand-fill', 'visibility', 'none'); map.setLayoutProperty('cand-line', 'visibility', 'none');
       var ids = d.lots.filter(function (l) { return evalLot(l, d).pass; }).map(function (l) { return l.id; });
       var on = ['in', ['get', 'id'], ['literal', ids]];
       map.setPaintProperty('lots-fill', 'fill-color', ['case', on, '#a9d4e6', '#3a3a3f']);
@@ -560,8 +567,12 @@
       '<p class="h3">Lots by size <span class="r">tap to show on the map</span></p><div class="bins">' + bin('lt0_5', '&lt; 0.5 acre') + bin('0_5to2', '0.5–2 acres') + bin('gt2', '&gt; 2 acres') + '</div>' +
       (s.aiLots ? '<div class="group" style="padding:12px 14px"><div class="h3" style="margin:0 0 4px">Found by the AI model <span class="tag term" data-tip="A U-Net trained on NAIP aerial imagery proposed these lots; a person confirmed each one. They are not in OpenStreetMap and are not included in the main figure.">AI + human review</span></div>' +
         '<div style="font-size:13px;color:var(--ink-2);line-height:1.5">' + fmt(s.aiLots) + ' more lots, <b style="color:var(--ink)">' + fmt(s.aiAcres, 1) + ' acres</b>. Including them, surface parking covers <b style="color:var(--ink)">' + pct(s.shareWithAi) + '</b> of downtown. Dashed outlines on the map.</div></div>' : '') +
+      ((s.candLots || s.roughLots) ? '<div class="group" style="padding:12px 14px"><div class="h3" style="margin:0 0 4px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Not yet exact <span class="tag term" data-tip="Dotted outlines: lots a reviewer confirmed as parking but whose outline was marked inaccurate, and any proposals of the final model that nobody has reviewed (92% of the model\'s proposals were real lots in the strictest review). They only widen the range and never enter the main figure.">approximate</span></span>' +
+        '<button class="switch' + (S.showCand ? ' on' : '') + '" id="candsw" role="switch" aria-checked="' + !!S.showCand + '" aria-label="Show approximate lots"></button></div>' +
+        '<div style="font-size:13px;color:var(--ink-2);line-height:1.5">' + (s.roughLots ? fmt(s.roughLots) + ' confirmed lot' + (s.roughLots > 1 ? 's' : '') + ' with an approximate outline (' + fmt(s.roughAcres, 1) + ' acres)' : '') + (s.roughLots && s.candLots ? ', ' : '') + (s.candLots ? fmt(s.candLots) + ' unreviewed AI proposal' + (s.candLots > 1 ? 's' : '') + ' (' + fmt(s.candAcres, 1) + ' acres)' : '') + '. Estimated range for downtown: <b style="color:var(--ink)">' + pct(s.shareWithAi || s.share) + ' – ' + pct(s.shareUpper) + '</b>. Dotted outlines when shown.</div></div>' : '') +
       (s.structures ? '<p class="note" style="margin:-6px 0 12px">' + fmt(s.structures) + ' parking structures (' + fmt(s.structuredAcres, 1) + ' acres of footprint) are shown in grey and not counted.</p>' : '') +
       '<p class="note">Lower bound: OSM-mapped lots only. Zoomed out, the glow shows where parking concentrates. The faintly lighter area is downtown; the ring marks the downtown core. Data fetched ' + d.osmFetched + '.</p>';
+    var sw = $('candsw'); if (sw) { sw.addEventListener('click', function () { S.showCand = !S.showCand; sw.classList.toggle('on', S.showCand); sw.setAttribute('aria-checked', S.showCand); var v = S.showCand && S.mode === 'footprint' ? 'visible' : 'none'; map.setLayoutProperty('cand-fill', 'visibility', v); map.setLayoutProperty('cand-line', 'visibility', v); }); }
     countUp($('bn'), s.share * 100, 1); countUp($('ba'), s.parkingAcres, 1); countUp($('bf'), s.parkingAcres / FIELD_ACRES, 0); countUp($('bl'), s.lots, 0);
     requestAnimationFrame(function () { requestAnimationFrame(function () { each('.bin .fil', function (f) { f.style.width = f.getAttribute('data-w') + '%'; }, pbody); }); });
     each('.bin', function (el) {

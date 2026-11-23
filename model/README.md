@@ -98,3 +98,7 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 ## Final (2026-11-23)
 - Round 8 strict review: 167 outline fits / 110 outline off / 23 no -> real lots 0.92, outline fit 0.60. By outline type: rectangle 1.00 (8), rectilinear 0.79, rectilinear+cut 0.57, rectangle+cut 0.38 -> final outlines use rectangles and right-angle shapes only.
 - Final retraining on round-8 answers did not beat the round-8 weights on 45 held-out strict answers (precision 0.944, yes kept 0.919), so `model/final/` = round-8 weights.
+
+## Final city-wide run (2026-11-23)
+- The final model was run over all 50 downtowns with the final settings. Every confident detection overlapped a lot that was already mapped in OSM (2,223), confirmed (incl.) or reviewed (384); 0 new proposals remained (`raw/final_detections.json`).
+- Lots confirmed as parking but with an inaccurate outline ("outline off", latest answer per lot, 48 lots; 22 inside downtown boundaries) are shown on request as dotted outlines and only raise the upper end of each city's range (`python/ai_candidates.py`).

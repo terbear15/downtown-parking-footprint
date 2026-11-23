@@ -1,0 +1,16 @@
+{
+ "kind": "dpf_final_run",
+ "model": "model/final (round-8 weights)",
+ "date": "2026-11-23",
+ "cities": 50,
+ "settings": "seeds p>=0.6 grown to p>=0.35; NDVI>0.12 removed; cut at OSM streets/buildings; mean p>=0.7; area>=1500 m2; rectangle/rectilinear outlines",
+ "componentsFiltered": {
+  "tooSmall": 6912,
+  "overlapsMappedOrConfirmedLot": 2223,
+  "alreadyReviewed": 384,
+  "lowConfidence": 53,
+  "onParksOrLandcover": 13,
+  "badShape": 3
+ },
+ "detections": []
+}

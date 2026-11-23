@@ -201,6 +201,18 @@ def outline(cells, proj):
 AI_CONFIRMED = {}
 
 
+AI_CANDIDATES = {}
+# share of model proposals that were real lots in the strict round-8 review (277 / 300)
+CANDIDATE_PRECISION = 0.92
+
+
+def load_ai_candidates():
+    f = RAW / "ai_candidates.json"
+    if f.exists():
+        for d in json.loads(f.read_text())["detections"]:
+            AI_CANDIDATES.setdefault(d["city"], []).append(d)
+
+
 def load_ai_confirmed():
     f = RAW / "ai_confirmed.json"
     if f.exists():
@@ -308,6 +320,17 @@ def build_city(cid, b, core, osm):
         ai_lots.append({"id": a["id"], "round": a["round"], "acres": round(abs(area(ring)) / M2_PER_ACRE, 3),
                         "acresInside": round(inside / M2_PER_ACRE, 3), "outer": [encode(a["poly"])]})
     ai_in = sum(x["acresInside"] for x in ai_lots) * M2_PER_ACRE
+    # unverified model proposals (final model, not reviewed): shown separately, used only for the upper bound
+    cand_lots = []
+    for a in AI_CANDIDATES.get(cid, []):
+        ring = [proj.xy(lon, lat) for lon, lat in a["poly"]]
+        inside = area_in_cells(ring, cells, c)
+        if inside <= 1:
+            continue
+        cand_lots.append({"id": a["id"], "kind": a.get("kind", "unverified"), "prob": a["prob"], "acres": round(abs(area(ring)) / M2_PER_ACRE, 3),
+                          "acresInside": round(inside / M2_PER_ACRE, 3), "outer": [encode(a["poly"])]})
+    rough_in = sum(x["acresInside"] for x in cand_lots if x["kind"] == "rough") * M2_PER_ACRE
+    cand_in = sum(x["acresInside"] for x in cand_lots if x["kind"] != "rough") * M2_PER_ACRE
     total_in = sum(l["acresInside"] for l in lots) * M2_PER_ACRE
     bins = {"lt0_5": [0, 0.0], "0_5to2": [0, 0.0], "gt2": [0, 0.0]}
     for l in lots:
@@ -333,6 +356,11 @@ def build_city(cid, b, core, osm):
         "aiLots": len(ai_lots),
         "aiAcres": round(ai_in / M2_PER_ACRE, 1),
         "shareWithAi": round((total_in + ai_in) / dt_m2, 4),
+        "roughLots": sum(1 for x in cand_lots if x["kind"] == "rough"),
+        "roughAcres": round(rough_in / M2_PER_ACRE, 1),
+        "candLots": sum(1 for x in cand_lots if x["kind"] != "rough"),
+        "candAcres": round(cand_in / M2_PER_ACRE, 1),
+        "shareUpper": round((total_in + ai_in + rough_in + CANDIDATE_PRECISION * cand_in) / dt_m2, 4),
         "structures": len(structures),
         "structuredAcres": round(sum(x["acresInside"] for x in structures), 1),
         "jobs": b.get("jobs"),
@@ -344,13 +372,14 @@ def build_city(cid, b, core, osm):
         "coreJobsPerAcre": core.get("jobsPerAcre"),
         "bounds": bounds, "outline": outline(cells, proj),
         "rule": b["rule"], "osmFetched": osm["fetched"][:10],
-        "stats": stats, "lots": lots, "structures": structures, "aiLots": ai_lots,
+        "stats": stats, "lots": lots, "structures": structures, "aiLots": ai_lots, "candLots": cand_lots,
     }
     return city
 
 
 def main():
     load_ai_confirmed()
+    load_ai_candidates()
     bounds = json.loads((RAW / "dpf_boundaries.json").read_text())["cities"]
     cores = json.loads((RAW / "dpf_cores.json").read_text())
     for extra in sorted(RAW.glob("dpf_boundaries_*.json")):
@@ -379,7 +408,7 @@ def main():
         index.append({"id": cid, "name": city["name"], "state": city["state"], "region": REGION[city["state"]],
                       "core": city["core"], "bounds": city["bounds"], "stats": {k: s[k] for k in (
                           "downtownSqMi", "downtownAcres", "lots", "parkingAcres", "share", "candidates",
-                          "lodesYear", "structures", "structuredAcres", "jobs", "aiLots", "aiAcres", "shareWithAi")}})
+                          "lodesYear", "structures", "structuredAcres", "jobs", "aiLots", "aiAcres", "shareWithAi", "roughLots", "roughAcres", "candLots", "candAcres", "shareUpper")}})
         manifest["files"][f"cities/{cid}.json"] = {
             "sha256": hashlib.sha256(text.encode()).hexdigest(), "bytes": len(text),
             "lots": s["lots"], "parkingAcres": s["parkingAcres"], "share": s["share"],
@@ -396,13 +425,13 @@ def main():
         c["lowCoverage"] = c["id"] != "newyork" and c["stats"]["lotsPerSqMi"] < q1
         c["rank"] = order.index(c) + 1
     rows = ["city,state,region,downtown_sq_mi,downtown_acres,jobs_lodes,lodes_year,surface_lots,surface_parking_acres,share_of_downtown,"
-            "lots_per_sq_mi,possible_osm_undermapping,score4_candidates,score3_candidates,structured_parking_acres,ai_confirmed_lots,ai_confirmed_acres,share_with_ai_confirmed"]
+            "lots_per_sq_mi,possible_osm_undermapping,score4_candidates,score3_candidates,structured_parking_acres,ai_confirmed_lots,ai_confirmed_acres,share_with_ai_confirmed,ai_rough_outline_lots,ai_rough_outline_acres,ai_unverified_lots,ai_unverified_acres,share_upper_estimate"]
     for c in index:
         s_ = c["stats"]
         rows.append(",".join(str(x) for x in [f'"{c["name"]}"', c["state"], c["region"], s_["downtownSqMi"], s_["downtownAcres"],
                     s_["jobs"] if s_["jobs"] is not None else "", s_["lodesYear"], s_["lots"], s_["parkingAcres"], s_["share"],
                     s_["lotsPerSqMi"], str(c["lowCoverage"]).lower(), s_["candidates"][4], s_["candidates"][3], s_["structuredAcres"],
-                    s_["aiLots"], s_["aiAcres"], s_["shareWithAi"]]))
+                    s_["aiLots"], s_["aiAcres"], s_["shareWithAi"], s_["roughLots"], s_["roughAcres"], s_["candLots"], s_["candAcres"], s_["shareUpper"]]))
     csv = "\n".join(rows) + "\n"
     (OUT / "summary.csv").write_text(csv, encoding="utf-8")
     manifest["files"]["summary.csv"] = {"sha256": hashlib.sha256(csv.encode()).hexdigest(), "bytes": len(csv)}
