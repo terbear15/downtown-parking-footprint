@@ -76,3 +76,11 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
   round-6 model raw {'iou': 0.326, 'precision': 0.649, 'recall': 0.396}, snapped {'iou': 0.342, 'precision': 0.726, 'recall': 0.392}.
   Snapping is what improves boundaries; the retrained weights alone are about level.
 - Review adds "Yes, outline off" to measure outline quality directly. 74 new detections.
+
+
+## Round 7 (2026-11-23)
+- Round 6 review: 36 yes (outline fits) / 26 yes (outline off) / 9 no / 3 unsure -> lot precision 0.87, outline fit 0.58. Feedback: trees included, lots under-covered, too many sides.
+- Fixed a bug in the dilation helper (it extended 2r px east but r px west), which had shifted every outline a few pixels east since round 1.
+- Outline pipeline: hysteresis growth (seed >= 0.6, grow >= 0.35); NAIP near-infrared NDVI > 0.12 removes trees/grass; cut back at OSM streets and buildings; best-fitting 3-6 sided polygon, then vertices removed while IoU >= 0.93.
+- Held-out city tiles, snapped pixel IoU 0.364 (round 5: 0.340).
+- 300 review items in 50 cities (235 re-outlined lots you confirmed earlier, 65 new); sides: {4: 56, 5: 173, 6: 71}.

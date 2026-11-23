@@ -1,0 +1,110 @@
+{
+ "name": "U-Net, MobileNet v1 0.25 encoder, round 7 (rounds 1-6 answers; boundary-weighted loss; context negatives)",
+ "bestEpoch": 2,
+ "heldOutCities": {
+  "iou": 0.342,
+  "precision": 0.643,
+  "recall": 0.422
+ },
+ "boundaryOnHeldOutCities": {
+  "round7": {
+   "raw": {
+    "iou": 0.342,
+    "precision": 0.643,
+    "recall": 0.422
+   },
+   "snapped": {
+    "iou": 0.364,
+    "precision": 0.732,
+    "recall": 0.42
+   }
+  }
+ },
+ "heldBackRound6": {
+  "thr": 0.75,
+  "yesKept": 0.769,
+  "noKept": 0,
+  "precision": 1,
+  "n": 18
+ },
+ "history": [
+  {
+   "ep": 1,
+   "lr": 6e-05,
+   "loss": 0.7375,
+   "score": 1.322,
+   "iou": 0.322,
+   "precision": 0.688,
+   "recall": 0.377,
+   "roofFP": 0.0165,
+   "fbYes": 0.692,
+   "fbNo": 0,
+   "fbPrecision": 1
+  },
+  {
+   "ep": 2,
+   "lr": 5.04e-05,
+   "loss": 0.7355,
+   "score": 1.342,
+   "iou": 0.342,
+   "precision": 0.643,
+   "recall": 0.422,
+   "roofFP": 0.0245,
+   "fbYes": 0.769,
+   "fbNo": 0,
+   "fbPrecision": 1
+  },
+  {
+   "ep": 3,
+   "lr": 4.23e-05,
+   "loss": 0.7345,
+   "score": 1.342,
+   "iou": 0.342,
+   "precision": 0.628,
+   "recall": 0.429,
+   "roofFP": 0.0263,
+   "fbYes": 0.923,
+   "fbNo": 0,
+   "fbPrecision": 1
+  },
+  {
+   "ep": 4,
+   "lr": 3.55e-05,
+   "loss": 0.7236,
+   "score": 1.338,
+   "iou": 0.338,
+   "precision": 0.641,
+   "recall": 0.417,
+   "roofFP": 0.0243,
+   "fbYes": 0.923,
+   "fbNo": 0,
+   "fbPrecision": 1
+  },
+  {
+   "ep": 5,
+   "lr": 2.98e-05,
+   "loss": 0.7243,
+   "score": 1.335,
+   "iou": 0.335,
+   "precision": 0.678,
+   "recall": 0.398,
+   "roofFP": 0.0191,
+   "fbYes": 0.846,
+   "fbNo": 0,
+   "fbPrecision": 1
+  },
+  {
+   "ep": 6,
+   "lr": 2.5e-05,
+   "loss": 0.7184,
+   "score": 1.332,
+   "iou": 0.332,
+   "precision": 0.655,
+   "recall": 0.402,
+   "roofFP": 0.0212,
+   "fbYes": 0.923,
+   "fbNo": 0,
+   "fbPrecision": 1
+  }
+ ]
+}
