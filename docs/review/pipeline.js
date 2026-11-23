@@ -349,7 +349,7 @@
   const angOK = (poly, minDeg) => { const n = poly.length; let sign = 0; for (let i = 0; i < n; i++) { const a = poly[(i + n - 1) % n], b = poly[i], c = poly[(i + 1) % n]; const v1 = [a[0] - b[0], a[1] - b[1]], v2 = [c[0] - b[0], c[1] - b[1]]; const cr = v1[0] * v2[1] - v1[1] * v2[0]; const ang = Math.abs(Math.atan2(cr, v1[0] * v2[0] + v1[1] * v2[1])) * 180 / Math.PI; if (ang < minDeg) return false; } return true; };
   AI.angOK = angOK;
   AI.rectShape = (px, o) => {
-    o = Object.assign({ maxV: 16, minDeg: 85, blocks: [2, 3, 4, 6, 8, 11, 15], allBlocks: true }, o || {});
+    o = Object.assign({ maxV: 16, minDeg: 85, blocks: [2, 3, 4, 6, 8, 11, 15], allBlocks: true, maxCham: AI.FINAL ? 0 : 2, hull: !AI.FINAL }, o || {});
     const pc = px.map(([x, y]) => [x + 0.5, y + 0.5]); const h = AI.hull(pc); if (h.length < 3) return null; const r = AI.minRect(h); if (!r) return null;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of px) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     const pad = 4, W = x1 - x0 + 1 + 2 * pad, H = y1 - y0 + 1 + 2 * pad, M = new Uint8Array(W * H); for (const [x, y] of px) M[(y - y0 + pad) * W + (x - x0 + pad)] = 1;
@@ -378,9 +378,9 @@
         if (!best || best.v < curI + 0.02) break; cur = best.q; curI = best.v; used++; }
       return cur; };
     const top = cands.map(c => ({ c, sc: iou(c.poly) - 0.006 * c.poly.length })).sort((a, b) => b.sc - a.sc).slice(0, 2);
-    for (const { c } of top) cands.push({ kind: c.kind === 'rectangle' ? 'rectangle+cut' : 'rectilinear+cut', poly: chamfer(c.poly), cut: true });
+    if (o.maxCham > 0) for (const { c } of top) cands.push({ kind: c.kind === 'rectangle' ? 'rectangle+cut' : 'rectilinear+cut', poly: chamfer(c.poly), cut: true });
     // simplified hull, only if no acute corner
-    const hc = h; for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q, hullPen: 0.06 }); break; } }
+    const hc = h; for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (o.hull && angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q, hullPen: 0.06 }); break; } }
     let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.006 * c.poly.length - (c.hullPen || 0); if (!best || c.score > best.score) best = c; }
     return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly } : null;
   };
