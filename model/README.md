@@ -85,3 +85,11 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 - Held-out city tiles, snapped pixel IoU 0.364 (round 5: 0.340).
 - 300 review items in 50 cities (235 re-outlined lots you confirmed earlier, 65 new); sides: {4: 56, 5: 173, 6: 71}.
 - Round 7 regenerated (version r7b) after feedback that outlines had acute angles: outlines are now fitted in the lot's own orientation as an oriented rectangle, a rectilinear polygon (all 90-degree corners) or a hull polygon with no corner sharper than 85 degrees. Shapes: {'rectangle': 59, 'rectilinear': 113, 'polygon': 128}; 0 outlines with a corner under 80 degrees.
+
+
+## Round 8 (2026-11-23)
+- Round 7 review: 172 yes (outline fits) / 110 outline off / 18 no -> lot precision 0.94, outline fit 0.61.
+  Outline fit by type: rectilinear 0.81, rectangle 0.60, hull polygon 0.43; fit-IoU < 0.75 -> 0.36.
+- Outline: right-angle shape in the lot orientation (blocks 2-15 px) plus up to 2 diagonal corner cuts when IoU rises >= 0.02; hull polygons penalised.
+- Retrained 5 epochs with round-7 answers; held-back round-7 precision 0.964 (yes kept 0.931).
+- 300 review items: {'rough': 120, 'new': 94, 'yes': 86} (rough = lots you marked "outline off" before); shapes {'rectangle+cut': 111, 'polygon': 16, 'rectilinear': 125, 'rectilinear+cut': 40, 'rectangle': 8}.
