@@ -58,3 +58,10 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 - Best epoch 2. Held-back round-3 answers at threshold 0.78: precision 0.762 (round-3 model on the same items: 0.533); yes kept 0.667, no kept 0.227.
 - Detection also drops candidates >30% on buildings. 250 detections in 47 cities, all outlines render-checked.
 - Pipeline code: docs/review/pipeline.js.
+
+
+## Round 5 (2026-11-23)
+- Round 4 review: 191 yes / 47 no / 12 unsure, precision 0.80. Remaining errors: construction sites, container yards.
+- Retrained from round-4 weights on rounds 1-4 answers; OSM industrial/railway land (OpenFreeMap) as weight-2 negatives; 62 round-4 answers held back.
+- Best epoch 2: held-back round-4 precision 0.897 (round-4 model on the same items: 0.826).
+- Detection also drops candidates >50% on industrial/railway land. 51 new detections (most high-confidence lots are already confirmed or reviewed).
