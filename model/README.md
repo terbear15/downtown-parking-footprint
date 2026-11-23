@@ -84,3 +84,4 @@ Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on t
 - Outline pipeline: hysteresis growth (seed >= 0.6, grow >= 0.35); NAIP near-infrared NDVI > 0.12 removes trees/grass; cut back at OSM streets and buildings; best-fitting 3-6 sided polygon, then vertices removed while IoU >= 0.93.
 - Held-out city tiles, snapped pixel IoU 0.364 (round 5: 0.340).
 - 300 review items in 50 cities (235 re-outlined lots you confirmed earlier, 65 new); sides: {4: 56, 5: 173, 6: 71}.
+- Round 7 regenerated (version r7b) after feedback that outlines had acute angles: outlines are now fitted in the lot's own orientation as an oriented rectangle, a rectilinear polygon (all 90-degree corners) or a hull polygon with no corner sharper than 85 degrees. Shapes: {'rectangle': 59, 'rectilinear': 113, 'polygon': 128}; 0 outlines with a corner under 80 degrees.
