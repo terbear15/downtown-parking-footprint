@@ -283,7 +283,7 @@
     if (instant) { hero.style.transition = 'none'; }
     hero.classList.add('out'); document.body.classList.add('entered');
     resize();
-    if (!S.active && S.mapReady) { overviewCamera(instant ? 0 : 1600); }
+    if (!S.active && S.mapReady) { if (instant) { overviewCamera(0); } else { setTimeout(function () { if (!S.active) { overviewCamera(900); } }, 450); } }
   }
   function showIntro() {
     S.entered = false; hero.style.transition = ''; hero.classList.remove('out'); hero.classList.add('in'); document.body.classList.remove('entered'); closeLot();
@@ -410,7 +410,11 @@
   /* ---------------- overview ---------------- */
   function overviewCamera(dur) {
     var cam = map.cameraForBounds(CONUS, { padding: padFor('overview') });
-    if (cam) { map.flyTo({ center: cam.center, zoom: cam.zoom, duration: dur, curve: 1.4, essential: true }); }
+    if (!cam) { return; }
+    var c0 = map.getCenter(), dz = Math.abs(map.getZoom() - cam.zoom), dc = Math.abs(c0.lng - cam.center.lng) + Math.abs(c0.lat - cam.center.lat);
+    if (dz < 0.08 && dc < 0.5) { return; }              // already there: no movement, no jitter
+    // easeTo (no zoom-out arc): flyTo's arc collided with maxBounds and made the camera shudder
+    if (!dur) { map.jumpTo({ center: cam.center, zoom: cam.zoom }); } else { map.easeTo({ center: cam.center, zoom: cam.zoom, duration: dur, easing: function (t) { return 1 - Math.pow(1 - t, 3); }, essential: true }); }
   }
   var RANK = {
     share: ['Share of downtown', function (c) { return c.stats.share; }, function (v) { return pct(v); }],
