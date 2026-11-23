@@ -167,7 +167,7 @@
   AI.loadReviews = async () => {
     const get = p => fetch(p).then(r => r.ok ? r.json() : null).catch(() => null);
     AI.rounds = [];
-    for (const [n, sp, ap] of [[1, 'review.json', 'round1_results.json'], [2, 'review_r2.json', 'round2_results.json'], [3, 'review_r3.json', 'round3_results.json'], [4, 'review_r4.json', 'round4_results.json'], [5, 'review_r5.json', 'round5_results.json'], [6, 'review_r6.json', 'round6_results.json'], [7, 'review_r7.json', 'round7_results.json']]) {
+    for (const [n, sp, ap] of [[1, 'review.json', 'round1_results.json'], [2, 'review_r2.json', 'round2_results.json'], [3, 'review_r3.json', 'round3_results.json'], [4, 'review_r4.json', 'round4_results.json'], [5, 'review_r5.json', 'round5_results.json'], [6, 'review_r6.json', 'round6_results.json'], [7, 'review_r7.json', 'round7_results.json'], [8, 'review_r8.json', 'round8_results.json']]) {
       const s = await get(sp), a = await get(ap); if (s && a) AI.rounds.push({ n, set: s, ans: a.answers || a });
     }
     AI.reviewed = [];   // {round,id,city,a,kind,poly|mask,x,y}
@@ -349,7 +349,7 @@
   const angOK = (poly, minDeg) => { const n = poly.length; let sign = 0; for (let i = 0; i < n; i++) { const a = poly[(i + n - 1) % n], b = poly[i], c = poly[(i + 1) % n]; const v1 = [a[0] - b[0], a[1] - b[1]], v2 = [c[0] - b[0], c[1] - b[1]]; const cr = v1[0] * v2[1] - v1[1] * v2[0]; const ang = Math.abs(Math.atan2(cr, v1[0] * v2[0] + v1[1] * v2[1])) * 180 / Math.PI; if (ang < minDeg) return false; } return true; };
   AI.angOK = angOK;
   AI.rectShape = (px, o) => {
-    o = Object.assign({ maxV: 12, minDeg: 85 }, o || {});
+    o = Object.assign({ maxV: 16, minDeg: 85, blocks: [2, 3, 4, 6, 8, 11, 15], allBlocks: true }, o || {});
     const pc = px.map(([x, y]) => [x + 0.5, y + 0.5]); const h = AI.hull(pc); if (h.length < 3) return null; const r = AI.minRect(h); if (!r) return null;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of px) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     const pad = 4, W = x1 - x0 + 1 + 2 * pad, H = y1 - y0 + 1 + 2 * pad, M = new Uint8Array(W * H); for (const [x, y] of px) M[(y - y0 + pad) * W + (x - x0 + pad)] = 1;
@@ -360,18 +360,27 @@
     // rectilinear in the lot frame at coarse block sizes
     const U = pc.map(([x, y]) => [x * r.ux + y * r.uy - ua, -x * r.uy + y * r.ux - va]);
     const Lu = r.u1 - r.u0 + 1, Lv = r.v1 - r.v0 + 1;
-    for (const b of [3, 4, 6, 8, 11, 15]) {
+    for (const b of (o.blocks || [3, 4, 6, 8, 11, 15])) {
       const gw = Math.ceil(Lu / b) + 2, gh = Math.ceil(Lv / b) + 2, cnt = new Float32Array(gw * gh);
       for (const [u, v] of U) { const i = Math.floor(u / b) + 1, j = Math.floor(v / b) + 1; if (i >= 0 && j >= 0 && i < gw && j < gh) cnt[j * gw + i]++; }
       const g = new Uint8Array(gw * gh); for (let k = 0; k < g.length; k++) g[k] = cnt[k] >= 0.5 * b * b ? 1 : 0;
       const ring = AI.traceCells(g, gw, gh); if (!ring || ring.length < 4) continue;
       const poly = ring.map(([i, j]) => back((i - 1) * b + ua, (j - 1) * b + va));
       if (poly.length <= o.maxV) { cands.push({ kind: 'rectilinear', poly }); }
-      if (poly.length <= 6) break;
+      if (poly.length <= 6 && !o.allBlocks) break;
     }
+    // chamfers: replace a right-angle corner by a diagonal cut where the lot has an angled side (at most 2, only if IoU clearly improves)
+    const chamfer = (poly) => { let cur = poly, curI = iou(poly), used = 0;
+      while (used < (o.maxCham == null ? 2 : o.maxCham)) { let best = null;
+        for (let k = 0; k < cur.length; k++) { const A = cur[(k + cur.length - 1) % cur.length], B = cur[k], C = cur[(k + 1) % cur.length]; const la = Math.hypot(A[0] - B[0], A[1] - B[1]), lc = Math.hypot(C[0] - B[0], C[1] - B[1]);
+          for (const f of [0.15, 0.3, 0.45, 0.6]) { for (const g2 of [0.15, 0.3, 0.45, 0.6]) { const P = [B[0] + (A[0] - B[0]) * f, B[1] + (A[1] - B[1]) * f], Q = [B[0] + (C[0] - B[0]) * g2, B[1] + (C[1] - B[1]) * g2]; if (la * f < 4 || lc * g2 < 4) continue;
+            const q = cur.slice(0, k).concat([P, Q], cur.slice(k + 1)); const v = iou(q); if (!best || v > best.v) best = { q, v }; } } }
+        if (!best || best.v < curI + 0.02) break; cur = best.q; curI = best.v; used++; }
+      return cur; };
+    for (const c of cands.slice()) cands.push({ kind: c.kind === 'rectangle' ? 'rectangle+cut' : 'rectilinear+cut', poly: chamfer(c.poly), cut: true });
     // simplified hull, only if no acute corner
-    const hc = h; for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q }); break; } }
-    let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.008 * c.poly.length; if (!best || c.score > best.score) best = c; }
+    const hc = h; for (const e of [1, 2, 3, 4, 6, 8, 12]) { const q = AI.dpRing(hc, e); if (q.length <= 6 && q.length >= 4) { if (angOK(q, o.minDeg)) cands.push({ kind: 'polygon', poly: q, hullPen: 0.06 }); break; } }
+    let best = null; for (const c of cands) { c.iou = iou(c.poly); c.score = c.iou - 0.006 * c.poly.length - (c.hullPen || 0); if (!best || c.score > best.score) best = c; }
     return best ? { shape: best.kind, fill: +(px.length / r.ar).toFixed(2), iou: +best.iou.toFixed(3), poly: best.poly } : null;
   };
 
