@@ -171,15 +171,47 @@
   }
   function setProgress(p) { var el = $('progress'); el.style.width = (p * 100) + '%'; if (p >= 1) { el.style.opacity = 0; } }
 
+
+  /* landing: a different data fact on every visit */
+  function showFact(j) {
+    var C = j.cities, n = C.length, B = function (t) { return '<b style="color:var(--ink)">' + esc(t) + '</b>'; };
+    var by = function (f) { return C.slice().sort(function (a, b) { return f(b) - f(a); }); };
+    var sum = function (f) { return C.reduce(function (a, c) { return a + f(c); }, 0); };
+    var rnd = C[Math.floor(Math.random() * n)];
+    var top = by(function (c) { return c.stats.share; })[0], low = by(function (c) { return -c.stats.share; })[0];
+    var dense = by(function (c) { return c.stats.lotsPerSqMi || 0; })[0];
+    var aiUp = by(function (c) { return (c.stats.shareWithAi || c.stats.share) - c.stats.share; })[0];
+    var big = by(function (c) { return c.stats.parkingAcres; })[0];
+    var allFour = sum(function (c) { return (c.stats.candidates && c.stats.candidates['4']) || 0; });
+    var aiLots = sum(function (c) { return c.stats.aiLots || 0; }), aiAcres = sum(function (c) { return c.stats.aiAcres || 0; });
+    var perJob = by(function (c) { return c.stats.jobs ? c.stats.parkingAcres / c.stats.jobs : 0; })[0];
+    var F = [
+      [top.stats.share * 100, 1, '%', 'of downtown ' + B(top.name) + ' is surface parking, the highest share we measured. The typical downtown is ' + pct(j.medianShare) + '.'],
+      [rnd.stats.share * 100, 1, '%', 'of downtown ' + B(rnd.name) + ' is surface parking, ranked ' + rnd.rank + ' of ' + n + ' downtowns.'],
+      [sum(function (c) { return c.stats.parkingAcres; }), 0, '', 'acres of mapped surface parking across the ' + n + ' downtown cores, about ' + fmt(sum(function (c) { return c.stats.parkingAcres; }) / 1.32) + ' football fields.'],
+      [j.medianShare * 100, 1, '%', 'of land in the typical U.S. downtown core is surface parking (median of ' + n + ' cities).'],
+      [rnd.stats.parkingAcres / 1.32, 0, '', 'football fields of surface parking in downtown ' + B(rnd.name) + ', across ' + fmt(rnd.stats.lots) + ' mapped lots.'],
+      [low.stats.share * 100, 1, '%', 'is the lowest share we measured, in downtown ' + B(low.name) + '.'],
+      [dense.stats.lotsPerSqMi, 0, '', 'surface lots per square mile in downtown ' + B(dense.name) + ', the densest pattern of lots in the study.'],
+      [big.stats.parkingAcres, 0, '', 'acres of surface parking in downtown ' + B(big.name) + ', the most of any city studied.'],
+      [perJob.stats.parkingAcres / perJob.stats.jobs * 1000, 1, '', 'acres of surface parking per 1,000 downtown jobs in ' + B(perJob.name) + ', the highest ratio in the study.'],
+      [allFour, 0, '', 'lots meet all four screening checks (size, distance to the core, transit, surrounding density). A screen, not a recommendation.'],
+      [aiLots, 0, '', 'lots missing from OpenStreetMap were found by our U-Net model and confirmed by a person, adding ' + fmt(aiAcres) + ' acres.'],
+      [((aiUp.stats.shareWithAi || 0) - aiUp.stats.share) * 100, 1, ' pts', 'added to downtown ' + B(aiUp.name) + '\'s parking share by lots the AI model found, the largest change of any city.']
+    ].filter(function (f) { return isFinite(f[0]) && f[0] > 0; });
+    var last = -1; try { last = +sessionStorage.getItem('dpf-fact'); if (isNaN(last)) { last = -1; } } catch (e) {}
+    var k = Math.floor(Math.random() * F.length); if (F.length > 1 && k === last) { k = (k + 1) % F.length; }
+    try { sessionStorage.setItem('dpf-fact', k); } catch (e) {}
+    var f = F[k]; $('finding-t').innerHTML = f[3]; $('finding').hidden = false; countUp($('finding-n'), f[0], f[1], f[2]);
+  }
+
   function loadIndex() {
     setProgress(0.15);
     return fetch('data/index.json').then(function (r) { if (!r.ok) { throw new Error(r.status); } setProgress(0.6); return r.json(); }).then(function (j) {
       S.cities = j.cities; S.medianShare = j.medianShare;
       j.cities.forEach(function (c) { S.byId[c.id] = c; });
       setProgress(1);
-      var top = j.cities.slice().sort(function (a, b) { return b.stats.share - a.stats.share; })[0];
-      $('finding-t').innerHTML = 'of downtown <b style="color:var(--ink)">' + esc(top.name) + '</b> is surface parking, the highest share we measured. The typical downtown is ' + pct(j.medianShare) + '.';
-      $('finding').hidden = false; countUp($('finding-n'), top.stats.share * 100, 1, '%');
+      showFact(j);
       renderRail(); renderOverview(); syncCities(); renderCoverage();
       applyHash();
     }).catch(function () {
