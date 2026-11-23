@@ -42,3 +42,11 @@ Changes:
 \* Round 1 proposed all of them by construction. The held-back set is 74 reviewed tiles (32 yes, 54 no) never used for training.
 
 Confirmed lots from round 1 (164 after merging pieces, 292 acres) are shown on the site as a separate dashed layer and in the "including AI-found lots" share.
+
+
+## Round 3 (2026-11-23)
+- Retrained from the round-2 weights on OSM lots + round-1 masks + round-2 reviewed outlines (yes weight 2, no weight 4); 117 reviewed items held back as a test.
+- Best epoch 7. On the held-back reviews at threshold 0.8: yes kept 75%, no kept 20%, precision proxy 0.778 (round 2 on the same test: 0.761 at 0.8, 0.73 at 0.5).
+- Outlines: traced in each lot's own orientation with right angles and simplified to about 8-17 corners; rectangle only if >=86% filled. Every outline in review_r3.json was render-checked (0 failures).
+- Stricter detection: mean probability >= 0.78, area >= 2000 m2. 199 detections, 190 in the review set (<=25 per city, 36 cities).
+- Weights: model/round2/ and model/round3/.

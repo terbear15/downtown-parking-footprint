@@ -1,0 +1,205 @@
+{
+ "name": "U-Net, MobileNet v1 0.25 encoder, round 3 (retrained on round 1 + round 2 answers)",
+ "bestEpoch": 7,
+ "heldOutCities": {
+  "iou": 0.335,
+  "precision": 0.608,
+  "recall": 0.427
+ },
+ "heldBackReviewed": {
+  "yesKept": 0.754,
+  "noKept": 0.203,
+  "yesN": 65,
+  "noN": 69,
+  "precisionProxy": 0.778
+ },
+ "round2OnSameTest": {
+  "val": {
+   "iou": 0.309,
+   "precision": 0.655,
+   "recall": 0.369
+  },
+  "fb": {
+   "yesKept": 0.831,
+   "noKept": 0.29,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.73
+  },
+  "fb08": {
+   "yesKept": 0.538,
+   "noKept": 0.159,
+   "precisionProxy": 0.761
+  }
+ },
+ "history": [
+  {
+   "ep": 1,
+   "lr": 0.0001,
+   "loss": 0.8325,
+   "iou": 0.331,
+   "precision": 0.573,
+   "recall": 0.439,
+   "yesKept": 0.877,
+   "noKept": 0.522,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.613,
+   "score": 0.637
+  },
+  {
+   "ep": 2,
+   "lr": 9.2e-05,
+   "loss": 0.8194,
+   "iou": 0.314,
+   "precision": 0.628,
+   "recall": 0.385,
+   "yesKept": 0.892,
+   "noKept": 0.333,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.716,
+   "score": 0.672
+  },
+  {
+   "ep": 3,
+   "lr": 8.47e-05,
+   "loss": 0.8123,
+   "iou": 0.341,
+   "precision": 0.609,
+   "recall": 0.436,
+   "yesKept": 0.908,
+   "noKept": 0.449,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.656,
+   "score": 0.669
+  },
+  {
+   "ep": 4,
+   "lr": 7.79e-05,
+   "loss": 0.8067,
+   "iou": 0.327,
+   "precision": 0.627,
+   "recall": 0.407,
+   "yesKept": 0.892,
+   "noKept": 0.377,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.69,
+   "score": 0.672
+  },
+  {
+   "ep": 5,
+   "lr": 7.17e-05,
+   "loss": 0.8005,
+   "iou": 0.342,
+   "precision": 0.603,
+   "recall": 0.442,
+   "yesKept": 0.862,
+   "noKept": 0.435,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.651,
+   "score": 0.667
+  },
+  {
+   "ep": 6,
+   "lr": 6.59e-05,
+   "loss": 0.7991,
+   "iou": 0.333,
+   "precision": 0.617,
+   "recall": 0.42,
+   "yesKept": 0.877,
+   "noKept": 0.42,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.663,
+   "score": 0.665
+  },
+  {
+   "ep": 7,
+   "lr": 6.07e-05,
+   "loss": 0.8041,
+   "iou": 0.335,
+   "precision": 0.608,
+   "recall": 0.427,
+   "yesKept": 0.908,
+   "noKept": 0.377,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.694,
+   "score": 0.682
+  },
+  {
+   "ep": 8,
+   "lr": 5.58e-05,
+   "loss": 0.7872,
+   "iou": 0.346,
+   "precision": 0.617,
+   "recall": 0.44,
+   "yesKept": 0.877,
+   "noKept": 0.406,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.671,
+   "score": 0.681
+  },
+  {
+   "ep": 9,
+   "lr": 5.14e-05,
+   "loss": 0.7907,
+   "iou": 0.331,
+   "precision": 0.613,
+   "recall": 0.419,
+   "yesKept": 0.892,
+   "noKept": 0.42,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.667,
+   "score": 0.665
+  },
+  {
+   "ep": 10,
+   "lr": 4.73e-05,
+   "loss": 0.7869,
+   "iou": 0.337,
+   "precision": 0.584,
+   "recall": 0.444,
+   "yesKept": 0.923,
+   "noKept": 0.493,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.638,
+   "score": 0.656
+  },
+  {
+   "ep": 11,
+   "lr": 4.35e-05,
+   "loss": 0.7783,
+   "iou": 0.332,
+   "precision": 0.613,
+   "recall": 0.42,
+   "yesKept": 0.877,
+   "noKept": 0.391,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.679,
+   "score": 0.671
+  },
+  {
+   "ep": 12,
+   "lr": 4e-05,
+   "loss": 0.7824,
+   "iou": 0.335,
+   "precision": 0.621,
+   "recall": 0.421,
+   "yesKept": 0.908,
+   "noKept": 0.406,
+   "yesN": 65,
+   "noN": 69,
+   "precisionProxy": 0.678,
+   "score": 0.674
+  }
+ ]
+}
