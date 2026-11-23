@@ -52,18 +52,34 @@
 
   /* OSM building footprints (Overpass), rings in lon/lat */
   const bldCache = AI._bld = AI._bld || {};
+  /* minimal Mapbox Vector Tile decoder: polygons of one layer, in lon/lat */
+  function mvtPolys(buf, layerName, tz, tx, ty) {
+    const u = new Uint8Array(buf); let p = 0; const out = [];
+    const varint = () => { let r = 0, s = 0, b; do { b = u[p++]; r += (b & 0x7f) * 2 ** s; s += 7; } while (b & 0x80); return r; };
+    const skip = w => { if (w === 0) varint(); else if (w === 1) p += 8; else if (w === 2) { const l = varint(); p += l; } else if (w === 5) p += 4; };
+    while (p < u.length) { const k = varint(), f = k >> 3, w = k & 7; if (f !== 3 || w !== 2) { skip(w); continue; }
+      const len = varint(), end = p + len; let name = '', extent = 4096; const feats = [];
+      while (p < end) { const k2 = varint(), f2 = k2 >> 3, w2 = k2 & 7;
+        if (f2 === 1 && w2 === 2) { const l = varint(); name = new TextDecoder().decode(u.subarray(p, p + l)); p += l; }
+        else if (f2 === 5 && w2 === 0) extent = varint();
+        else if (f2 === 2 && w2 === 2) { const l = varint(), fe = p + l; let type = 0, geom = null; while (p < fe) { const k3 = varint(), f3 = k3 >> 3, w3 = k3 & 7; if (f3 === 3 && w3 === 0) type = varint(); else if (f3 === 4 && w3 === 2) { const gl = varint(), ge = p + gl; geom = []; while (p < ge) geom.push(varint()); } else skip(w3); } p = fe; feats.push([type, geom]); }
+        else skip(w2); }
+      p = end; if (name !== layerName) continue;
+      for (const [type, g] of feats) { if (type !== 3 || !g) continue; let x = 0, y = 0, i = 0, ring = null;
+        while (i < g.length) { const c = g[i++], cmd = c & 7, n = c >> 3;
+          if (cmd === 7) { if (ring && ring.length > 2) out.push(ring); ring = null; continue; }
+          for (let j = 0; j < n; j++) { const dx = g[i++], dy = g[i++]; x += (dx >> 1) ^ -(dx & 1); y += (dy >> 1) ^ -(dy & 1);
+            if (cmd === 1) ring = []; ring.push([x2lon(tx + x / extent, tz), y2lat(ty + y / extent, tz)]); } } } }
+    return out; }
+  AI.mvtPolys = mvtPolys;
   AI.buildings = async id => {
     if (bldCache[id]) return bldCache[id];
-    const d = await AI.city(id), [[w, s], [e, n]] = d.bounds, m = 0.004;
-    const q = '[out:json][timeout:120];way["building"](' + (s - m) + ',' + (w - m) + ',' + (n + m) + ',' + (e + m) + ');out geom;';
-    for (const ep of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter']) {
-      for (let t = 0; t < 2; t++) {
-        try { const r = await fetch(ep, { method: 'POST', body: 'data=' + encodeURIComponent(q) }); if (!r.ok) throw r.status; const j = await r.json();
-          return bldCache[id] = j.elements.filter(el => el.geometry && el.geometry.length > 3 && !/parking/.test(el.tags.building || '') ).map(el => el.geometry.map(p => [p.lon, p.lat]));
-        } catch (err) { await new Promise(r => setTimeout(r, 4000)); }
-      }
-    }
-    throw new Error('overpass failed ' + id);
+    if (!AI.ofm) AI.ofm = (await fetch('https://tiles.openfreemap.org/planet').then(r => r.json())).tiles[0];
+    const d = await AI.city(id), [[w, s], [e, n]] = d.bounds, m = 0.004, tz = 14;
+    const X0 = Math.floor(lon2x(w - m, tz)), X1 = Math.floor(lon2x(e + m, tz)), Y0 = Math.floor(lat2y(n + m, tz)), Y1 = Math.floor(lat2y(s - m, tz)); const jobs = [];
+    for (let x = X0; x <= X1; x++) for (let y = Y0; y <= Y1; y++) jobs.push([x, y]);
+    const parts = await pool(jobs, 6, async ([x, y]) => { for (let t = 0; t < 3; t++) { try { const ac = new AbortController(), to = setTimeout(() => ac.abort(), 20000); const r = await fetch(AI.ofm.replace('{z}', tz).replace('{x}', x).replace('{y}', y), { signal: ac.signal }); clearTimeout(to); if (r.status === 204 || r.status === 404) return []; if (!r.ok) throw r.status; return mvtPolys(await r.arrayBuffer(), 'building', tz, x, y); } catch (err) { await new Promise(r => setTimeout(r, 1500)); } } return []; });
+    return bldCache[id] = parts.flat();
   };
 
   /* buildings touching a z17 tile, via a tile-bucket index */
