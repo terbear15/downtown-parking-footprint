@@ -1,6 +1,6 @@
 {
  "name": "Downtown Parking Footprint - final parking-lot segmentation model",
- "architecture": "U-Net, MobileNet v1 0.25 encoder, 224x224 RGB NAIP tiles at zoom 17 (~0.6 m/px), 861,633 parameters",
+ "architecture": "U-Net, MobileNet v1 0.25 encoder, 224x224 RGB NAIP tiles at zoom 17 (~1.0-1.4 m per pixel depending on latitude), 861,633 parameters",
  "framework": "TensorFlow.js 4.22 (load with tf.loadLayersModel('model.json'))",
  "weights": "round 8 (trained on OSM lots + human review rounds 1-7)",
  "selection": "A final retraining with the strict round-8 answers (6 epochs) did not beat these weights on the 45 held-out round-8 answers, so the round-8 weights were kept.",
