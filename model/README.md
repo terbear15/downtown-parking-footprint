@@ -1,6 +1,27 @@
 # Parking-lot segmentation model
 
-U-Net with a MobileNet v1 (0.25, ImageNet-pretrained) encoder, trained in the browser with TensorFlow.js.
+**Final model: [`final/`](final/)** (TensorFlow.js; `final/metrics.json` has every figure below).
+
+U-Net with a MobileNet v1 (0.25, ImageNet-pretrained) encoder, 861,633 parameters, trained in the browser with TensorFlow.js on the GPU (WebGL), on NAIP aerial tiles (zoom 17, 224 px, about 1.0–1.4 m per pixel). It started from OpenStreetMap lots as labels and was then improved over **eight rounds of human review**: each round the model proposed lots, a person answered, and the answers became training data.
+
+| Round | Proposals | Real lots | Outline accepted | Main change |
+| --- | --- | --- | --- | --- |
+| 1 | 467 | 43% | – | trained on OSM lots only |
+| 2 | 450 | 61%* | – | retrained on round-1 answers |
+| 3 | 190 | 53% | – | stricter confidence, oriented outlines |
+| 4 | 250 | 80% | – | building footprints as negatives (rooftops) |
+| 5 | 51 | 76% | – | industrial / rail land as negatives |
+| 6 | 74 | 87% | 58% | edge-weighted loss; cut back at streets and buildings |
+| 7 | 300 | 94% | 61% | near-infrared tree removal; right-angle outlines |
+| 8 | 300 | 92% | 60% (strict) | rectilinear 79%, rectangles 100%, diagonal cuts 38% |
+
+\* visible outlines only. Final settings: rectangles and right-angle shapes only. On 45 held-out strict round-8 answers the final model keeps 92% of real lots at 0.94 precision. A final run over all 50 downtowns found no confident lots beyond those already mapped, confirmed or reviewed. Post-processing and outline fitting: `docs/review/pipeline.js`; figures: `docs/review/figures.js`.
+
+The sections below are the round-by-round log, oldest first.
+
+---
+
+## Round 1 (first model)
 
 - **Input:** 224 × 224 RGB NAIP aerial imagery (USDA, via Microsoft Planetary Computer), zoom-17 web tiles (~1.4 m pixels).
 - **Labels:** OpenStreetMap surface parking polygons rasterised onto each tile (noisy: unmapped lots count as background).
